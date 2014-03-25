@@ -1,8 +1,8 @@
 #include "kernel.h"
 
-void
-create_kthread(void (*fun) (void)) {
-
+PCB*
+create_kthread(void *fun) {
+	return NULL;
 }
 
 void
