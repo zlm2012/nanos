@@ -1,6 +1,6 @@
 #include "kernel.h"
 
-struct PCB idle, *current_pcb = &idle;
+PCB idle, *current = &idle;
 
 void
 schedule(void) {

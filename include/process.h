@@ -1,10 +1,10 @@
 #ifndef __PROCESS_H__
 #define __PROCESS_H__
 
-struct PCB {
-	void *esp;
-};
+typedef struct PCB {
+	void *tf;
+} PCB;
 
-extern struct PCB *current_pcb;
+extern PCB *current;
 
 #endif

@@ -60,7 +60,7 @@ void irq_handle(TrapFrame *tf) {
 		}
 	}
 
-	current_pcb->esp = tf;
+	current->tf = tf;
 	schedule();
 }
 
