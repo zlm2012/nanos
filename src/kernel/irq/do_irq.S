@@ -24,8 +24,8 @@
 .globl irq14;   irq14:  pushl $0;  pushl $1014; jmp asm_do_irq
 .globl irq_empty; irq_empty:pushl $0;pushl $-1; jmp asm_do_irq
 
-# the label "current_pcb" here is the memory address of variable current_pcb
-.extern current_pcb
+# the label "current" here is the memory address of variable current
+.extern current
 
 .globl asm_do_irq
 .extern irq_handle
@@ -45,7 +45,7 @@ asm_do_irq:
 	pushl %esp
 	call irq_handle
 	
-# YOU NEED TO SWITCH STACK TO current_pcb->esp
+# YOU NEED TO SWITCH STACK TO current->tf
 # SO YOU NEED TWO ADD TWO LINES OF INTERRUPT CODE
 # HINT:
 #     1. USE movl INSTRUCTION
