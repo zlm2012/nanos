@@ -1,7 +1,7 @@
 #include "common.h"
 #include "x86/x86.h"
 #include "memory.h"
-
+#define STACKSIZE 8192
 
 void init_page(void);
 void init_serial(void);
@@ -12,6 +12,8 @@ void init_proc(void);
 void welcome(void);
 
 void os_init_cont(void);
+
+uint8_t stackPool[STACKSIZE];
 
 void
 os_init(void) {

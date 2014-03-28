@@ -54,10 +54,10 @@ asm_do_irq:
 #     4. REGISTERS ARE REFERENCED BY "%", SUCH AS %esp
 
 ################### your work ###################
-
-
+	movl (current), %eax
+	movl (%eax), %esp
 #################################################
-	addl $4, %esp # when you finish this task, this instruction should be removed
+	#addl $4, %esp # when you finish this task, this instruction should be removed
 
 	popal
 	popl %gs

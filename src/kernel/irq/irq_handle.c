@@ -53,7 +53,6 @@ void irq_handle(TrapFrame *tf) {
 		int irq_id = irq - 1000;
 		assert(irq_id < NR_HARD_INTR);
 		struct IRQ_t *f = handles[irq_id];
-
 		while (f != NULL) { /* call handlers one by one */
 			f->routine(); 
 			f = f->next;
