@@ -47,7 +47,7 @@ list_init(ListHead *list) {
 	list->prev = list->next = list;
 }
 
-static inline boolean
+static inline bool
 list_empty(ListHead *list) {
 	assert(list != NULL);
 	return list == list->next;
