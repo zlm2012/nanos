@@ -55,7 +55,7 @@ asm_do_irq:
 
 ################### your work ###################
 	movl (current), %eax
-	movl (%eax), %esp
+	movl 4096(%eax), %esp
 #################################################
 	#addl $4, %esp # when you finish this task, this instruction should be removed
 
