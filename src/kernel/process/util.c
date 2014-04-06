@@ -72,6 +72,7 @@ leaveProcQ(bool stall) {
 }
 
 void sleep(void) {
+  cli();
   ListHead* i;
   list_foreach(i, &readyhead)
     if (list_entry(i, PCBQ, li)->pcb==current){
@@ -82,9 +83,11 @@ void sleep(void) {
       asm volatile("int $0x80");
       break;
     }
+  sti();
 }
 
 void wakeup(PCB *p) {
+  cli();
   ListHead* i;
   list_foreach(i, &stallhead)
     if (list_entry(i, PCBQ, li)->pcb==p) {
@@ -94,6 +97,7 @@ void wakeup(PCB *p) {
       enterProcQ(false, p);
       break;
     }
+  sti();
 }
 
 void A () { 
