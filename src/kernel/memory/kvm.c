@@ -107,7 +107,7 @@ set_segment(SegDesc *ptr, uint32_t pl, uint32_t type) {
 	ptr->base_23_16  = 0x0;
 	ptr->type = type;
 	ptr->segment_type = 1;
-	ptr->privilege_level = DPL_KERNEL;
+	ptr->privilege_level = pl;
 	ptr->present = 1;
 	ptr->limit_19_16 = 0xF;
 	ptr->soft_use = 0;

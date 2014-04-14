@@ -149,7 +149,6 @@ PCB*
 create_kthread(void *fun) {
   TrapFrame *tf=(TrapFrame *)(pcbpool[pcblen].kstack+4096-sizeof(TrapFrame));
   pcbpool[pcblen].tf=tf;
-  pcbpool[pcblen].sleep=false;
   tf->eip=(uint32_t)fun;
   tf->cs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_CODE);
   tf->ds=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
