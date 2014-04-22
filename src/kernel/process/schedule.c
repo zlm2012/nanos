@@ -7,15 +7,18 @@ PCB idle, *current = &idle;
 extern int pcblen;
 extern PCB pcbpool[];
 extern ListHead readyhead;
-extern void enterProcQ(bool, PCB*);
-extern PCB* leaveProcQ(bool);
+extern int readylen;
+extern void enterProcQ(bool, PCB*, ListHead*);
+extern PCB* leaveProcQ(ListHead*, int*);
 
 void
 schedule(void) {
+  if (current->sleep || current->lock==0) {
   if (list_empty(&readyhead)) {
     current = &idle;
     return;
   }
-  current=leaveProcQ(false);
-  enterProcQ(false, current);
+  current=leaveProcQ(&readyhead, &readylen);
+  enterProcQ(false, current, &readyhead);
+  }
 }
