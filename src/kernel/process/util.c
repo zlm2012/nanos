@@ -6,7 +6,7 @@
 extern PCB* current;
 extern void schedule();
 int pcblen = 0;
-PCB pcbpool[8];
+PCB pcbpool[20];
 typedef struct PCBQ {
   PCB* pcb;
   ListHead li;
@@ -52,13 +52,13 @@ enterProcQ(bool stall, PCB* pcb, ListHead* q) {
 PCB*
 leaveProcQ(ListHead* q, int* len) {
   ListHead* i;
-    if (list_empty(q))
-      return NULL;
-    i=q->next;
-    list_del(i);
-    (*len)--;
-    list_entry(i, PCBQ, li)->va=0;
-    return list_entry(i, PCBQ, li)->pcb;
+  if (list_empty(q))
+    return NULL;
+  i=q->next;
+  list_del(i);
+  (*len)--;
+  list_entry(i, PCBQ, li)->va=0;
+  return list_entry(i, PCBQ, li)->pcb;
 }
 
 void sleep(void) {
@@ -70,9 +70,7 @@ void sleep(void) {
       list_entry(i, PCBQ, li)->va=0;
       list_del(i);
       enterProcQ(true, current, &stallhead);
-      current->sleep=true;
       asm volatile("int $0x80");
-      current->sleep=false;
       break;
     }
   unlock();
@@ -117,52 +115,77 @@ void V(Sem *s) {
 }
 
 void A () { 
-  int x = 0;
-  while(1) {
-    if(x % 100000 == 0) {
-      printk("a");
-      lock();
-      x=0;
-      wakeup(&pcbpool[1]);
-      sleep();
-      unlock();
-
-    }
-    x ++;
-  }
+	Msg m1, m2;
+	m1.src = current->pid;
+	int x = 0;
+	while(1) {
+		if(x % 10000000 == 0) {
+			printk("a"); 
+			send(4, &m1);
+			receive(4, &m2);
+		}
+		x ++;
+	}
 }
 void B () { 
-  int x = 0;
-  while(1) {
-    if(x % 100000 == 0) {
-      printk("b");
-      wakeup(&pcbpool[2]);
-      sleep();
-    }
-    x ++;
-  }
+	Msg m1, m2;
+	m1.src = current->pid;
+	int x = 0;
+	receive(4, &m2);
+	while(1) {
+		if(x % 10000000 == 0) {
+			printk("b"); 
+			send(4, &m1);
+			receive(4, &m2);
+		}
+		x ++;
+	}
 }
 void C () { 
-  int x = 0;
-  while(1) {
-    if(x % 100000 == 0) {
-      printk("c");
-      wakeup(&pcbpool[3]);
-      sleep();
-    }
-    x ++;
-  }
+	Msg m1, m2;
+	m1.src = current->pid;
+	int x = 0;
+	receive(4, &m2);
+	while(1) {
+		if(x % 10000000 == 0) {
+			printk("c"); 
+			send(4, &m1);
+			receive(4, &m2);
+		}
+		x ++;
+	}
 }
 void D () { 
-  int x = 0;
-  while(1) {
-    if(x % 100000 == 0) {
-      printk("d");
-      wakeup(&pcbpool[0]);
-      sleep();
-    }
-    x ++;
-  }
+	Msg m1, m2;
+	m1.src = current->pid;
+	receive(4, &m2);
+	int x = 0;
+	while(1) {
+		if(x % 10000000 == 0) {
+			printk("d"); 
+			send(4, &m1);
+			receive(4, &m2);
+		}
+		x ++;
+	}
+}
+ 
+void E () {
+	Msg m1, m2;
+	m2.src = current->pid;
+	char c;
+	while(1) {
+		receive(MSG_TRGT_ANY, &m1);
+		if(m1.src == 0) {c = '|'; m2.dest = 1; }
+		else if(m1.src == 1) {c = '/'; m2.dest = 2;}
+		else if(m1.src == 2) {c = '-'; m2.dest = 3;}
+		else if(m1.src == 3) {c = '\\';m2.dest = 0;}
+		else assert(0);
+ 
+		printk("\033[s\033[1000;1000H%c\033[u", c);
+		send(m2.dest, &m2);
+	}
+ 
 }
 
 PCB*
@@ -170,7 +193,10 @@ create_kthread(void *fun) {
   TrapFrame *tf=(TrapFrame *)(pcbpool[pcblen].kstack+4096-sizeof(TrapFrame));
   pcbpool[pcblen].tf=tf;
   pcbpool[pcblen].lock=0;
-  pcbpool[pcblen].sleep=false;
+  pcbpool[pcblen].lockif=0;
+  pcbpool[pcblen].pid=pcblen;
+  list_init(&(pcbpool[pcblen].msgq));
+  create_sem(&(pcbpool[pcblen].msem), 0);
   tf->eip=(uint32_t)fun;
   tf->cs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_CODE);
   tf->ds=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
@@ -237,14 +263,12 @@ test_setup(void) {
 void
 init_proc() {
   initProcQ();
-  test_setup();
-  //create_kthread(&A);
-  //create_kthread(&B);
-  //create_kthread(&C);
-  //create_kthread(&D);
+  //test_setup();
   //wakeup(&pcbpool[0]);
-  //enterProcQ(false, create_kthread(&B), &readyhead);
-  //enterProcQ(false, create_kthread(&C), &readyhead);
-  //enterProcQ(false, create_kthread(&D), &readyhead);
+  wakeup(create_kthread(A));
+  wakeup(create_kthread(B));
+  wakeup(create_kthread(C));
+  wakeup(create_kthread(D));
+  wakeup(create_kthread(E));
 }
 
