@@ -262,6 +262,19 @@ test_setup(void) {
 	}
 }
 
+void testIDE(void) {
+	int i;
+	unsigned char buf[512];
+	dev_read("hda", current->pid, buf, 0, 512);
+	lock();
+	printk("MBR INFO:\n----------------------------\n");
+	for (i=0; i<512; i++)
+		printk("%x ", (int)buf[i]);
+	printk("\n----------------------------\n\n");
+	unlock();
+	sleep();
+}
+
 void
 init_proc() {
   initProcQ();
@@ -272,5 +285,6 @@ init_proc() {
   wakeup(create_kthread(C));
   wakeup(create_kthread(D));
   wakeup(create_kthread(E));
+  wakeup(create_kthread(testIDE));
 }
 

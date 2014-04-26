@@ -18,7 +18,7 @@ getty(void) {
 		 * 3. write the result on screen (use dev_write())
 		 */
 		memset(buf, 0, 256);
-		dev_read(name, TTY, buf, 0, 256);
+		dev_read(name, current->pid, buf, 0, 256);
 		for(i=0; i<strlen(buf); i++)
 			if (buf[i]<='z' && buf[i]>='a')
 				buf[i]+='A'-'a';
