@@ -9,6 +9,7 @@ void init_segment(void);
 void init_idt(void);
 void init_intr(void);
 void init_proc(void);
+void init_driver(void);
 void welcome(void);
 
 void os_init_cont(void);
@@ -48,7 +49,7 @@ os_init_cont(void) {
 
 	/* Initialize the intel 8259 PIC. */
 	init_intr();
-
+/*
 #define PORT_TIME 0x40
 #define FREQ_8253 1193182
 #define HZ        100000
@@ -58,9 +59,11 @@ assert(count < 65536);
 out_byte(PORT_TIME + 3, 0x34);
 out_byte(PORT_TIME    , count % 256);
 out_byte(PORT_TIME    , count / 256);
-
+*/
 	/* Initialize processes. You should fill this. */
 	init_proc();
+
+	init_driver();
 
 	welcome();
 

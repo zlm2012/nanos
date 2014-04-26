@@ -8,5 +8,6 @@ void memcpy(void *, const void *, size_t);
 void memset(void *, uint8_t, size_t);
 size_t strlen(const char *);
 void strcpy(char *d, const char *s);
+int strcmp(const char *s1, const char *s2);
 
 #endif

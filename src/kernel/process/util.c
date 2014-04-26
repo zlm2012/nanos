@@ -5,8 +5,9 @@
 //extern uint8_t stackPool[];
 extern PCB* current;
 extern void schedule();
-int pcblen = 0;
-PCB pcbpool[20];
+int pcblen = 0, msglen=0;
+PCB pcbpool[50];
+MsgPU msgpool[500];
 typedef struct PCBQ {
   PCB* pcb;
   ListHead li;
@@ -23,6 +24,7 @@ initProcQ(void) {
   list_init(&stallhead);
   memset(readypool, 0, sizeof(readypool));
   memset(stallpool, 0, sizeof(stallpool));
+  memset(msgpool, 0, sizeof(msgpool));
 }
 
 void

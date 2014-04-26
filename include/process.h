@@ -2,6 +2,8 @@
 #define __PROCESS_H__
 #define KSTACK_SIZE 4096
 #define MSG_TRGT_ANY -1
+#define MSG_HARD_INTR -2
+#define ANY -1
 #include "adt/list.h"
 #include "common.h"
 #include "string.h"
@@ -24,6 +26,7 @@ typedef union PCB {
 } PCB;
 
 extern PCB pcbpool[];
+extern int pcblen;
 
 typedef struct Message {
   pid_t src, dest;
@@ -44,7 +47,14 @@ typedef struct Message {
   ListHead list;
 } Msg;
 
+typedef struct MsgPU {
+  Msg m;
+  bool va;
+} MsgPU;
+
 extern PCB *current;
+extern MsgPU msgpool[];
+extern int msglen;
 
 static inline void
 create_sem(Sem* sem, int tok) {
@@ -54,47 +64,72 @@ create_sem(Sem* sem, int tok) {
 
 static inline void
 lock() {
-  long ifl=(read_eflags()&512);
+  volatile long ifl=!!(read_eflags()&512);
   cli();
-  assert(current->lock<64);
-  current->lockif|=ifl<<(current->lock);
+  assert((current->lock)<64);
+  (current->lockif)|=ifl<<(current->lock);
   (current->lock)++;
 }
 
 static inline void
 unlock() {
+  volatile long ifl;
   (current->lock)--;
   assert(current->lock>=0);
-  if(((current->lockif)>>current->lock)&1) sti();
+  ifl=((current->lockif)>>(current->lock))&1;
+  (current->lockif)&=(1<<(current->lock))-1;
+  if(ifl) sti();
 }
 
 extern void P(Sem*);
 extern void V(Sem*);
+extern PCB* create_kthread(void*);
+extern void sleep(void);
+extern void wakeup(PCB*);
+
+static inline PCB*
+fetch_pcb(pid_t p) {
+  return &pcbpool[p];
+}
 
 static inline void
 send(pid_t dest, Msg *m) {
+  int i;
   lock();
-  list_add_after(pcbpool[dest].msgq.prev, &(m->list));
+  assert(dest<pcblen);
+  assert(msglen<500);
+  i=0;
+  while(msgpool[i].va) i++;
+  msgpool[i].va=true;
+  memcpy(&(msgpool[i]), m, sizeof(Msg));
+  msglen++;
+  list_add_before(&(pcbpool[dest].msgq), &(msgpool[i].m.list));
   V(&(pcbpool[dest].msem));
   unlock();
 }
 
 static inline void
 receive(pid_t src, Msg *m) {
-  int walked;
+  volatile int walked;
   ListHead *i;
+  Msg *mitr;
   lock();
   walked=0;
   while(1) {
     P(&(current->msem));
-    list_foreach(i, &(current->msgq))
-      if(src==MSG_TRGT_ANY || list_entry(i, Msg, list)->src==src) {
-	memcpy(m, list_entry(i, Msg, list), sizeof(Msg));
+    if(list_empty(&(current->msgq))) continue;
+    list_foreach(i, &(current->msgq)) {
+      mitr=list_entry(i, Msg, list);
+      if(src==ANY || mitr->src==src) {
+        memcpy(m, mitr, sizeof(Msg));
         list_del(i);
+        ((MsgPU*)mitr)->va=false;
+        msglen--;
 	while (walked--) V(&(current->msem));
 	unlock();
 	return;
       }
+    }
     walked++;
   }
 }
