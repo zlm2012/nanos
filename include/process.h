@@ -18,7 +18,7 @@ typedef union PCB {
   struct {
     void *tf;
     volatile int lock;
-    volatile long lockif;
+    volatile bool lockif;
     ListHead msgq;
     Sem msem;
     pid_t pid;
@@ -64,21 +64,18 @@ create_sem(Sem* sem, int tok) {
 
 static inline void
 lock() {
-  volatile long ifl=!!(read_eflags()&512);
+  volatile bool ifl=!!(read_eflags()&512);
   cli();
-  assert((current->lock)<64);
-  (current->lockif)|=ifl<<(current->lock);
+  if(current->lock==0)
+  current->lockif=ifl;
   (current->lock)++;
 }
 
 static inline void
 unlock() {
-  volatile long ifl;
   (current->lock)--;
   assert(current->lock>=0);
-  ifl=((current->lockif)>>(current->lock))&1;
-  (current->lockif)&=(1<<(current->lock))-1;
-  if(ifl) sti();
+  if(current->lockif && current->lock==0) sti();
 }
 
 extern void P(Sem*);
@@ -110,14 +107,13 @@ send(pid_t dest, Msg *m) {
 
 static inline void
 receive(pid_t src, Msg *m) {
-  volatile int walked;
+  //volatile int walked;
   ListHead *i;
   Msg *mitr;
   lock();
-  walked=0;
+  //walked=0;
   while(1) {
-    P(&(current->msem));
-    if(list_empty(&(current->msgq))) continue;
+    if(list_empty(&(current->msgq))) goto RCV_FAILED;
     list_foreach(i, &(current->msgq)) {
       mitr=list_entry(i, Msg, list);
       if(src==ANY || mitr->src==src) {
@@ -125,12 +121,14 @@ receive(pid_t src, Msg *m) {
         list_del(i);
         ((MsgPU*)mitr)->va=false;
         msglen--;
-	while (walked--) V(&(current->msem));
+	//while (walked--) V(&(current->msem));
 	unlock();
 	return;
       }
     }
-    walked++;
+RCV_FAILED:
+    P(&(current->msem));
+    //walked++;
   }
 }
 

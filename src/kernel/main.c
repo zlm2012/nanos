@@ -10,6 +10,7 @@ void init_idt(void);
 void init_intr(void);
 void init_proc(void);
 void init_driver(void);
+void init_fm(void);
 void welcome(void);
 
 void os_init_cont(void);
@@ -64,6 +65,8 @@ out_byte(PORT_TIME    , count / 256);
 	init_proc();
 
 	init_driver();
+
+	init_fm();
 
 	welcome();
 

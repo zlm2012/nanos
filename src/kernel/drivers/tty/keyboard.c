@@ -3,6 +3,8 @@
 #include "tty.h"
 #include "term.h"
 
+extern void add_keyboard_randomness(unsigned char scancode);
+
 void
 send_keymsg(void) {
 	Msg m;
@@ -18,6 +20,7 @@ readkey(void) {
 	uint32_t code = in_byte(0x60);
 	in_byte(0x61);
 	printk("%s, %d: keycode = %d\n", __FUNCTION__, __LINE__, code);
+	add_keyboard_randomness((unsigned char)code);
 
 	if (code >= 128) {
 		code -= 128;

@@ -4,7 +4,16 @@
 
 //extern uint8_t stackPool[];
 extern PCB* current;
-extern void schedule();
+extern void A();
+extern void B();
+extern void C();
+extern void D();
+extern void E();
+extern void test_setup();
+extern void testForTimer();
+extern void testIDE();
+extern void testRamdisk();
+
 int pcblen = 0, msglen=0;
 PCB pcbpool[50];
 MsgPU msgpool[500];
@@ -116,80 +125,6 @@ void V(Sem *s) {
   unlock();
 }
 
-void A () { 
-	Msg m1, m2;
-	m1.src = current->pid;
-	int x = 0;
-	while(1) {
-		if(x % 10000000 == 0) {
-			printk("a"); 
-			send(4, &m1);
-			receive(4, &m2);
-		}
-		x ++;
-	}
-}
-void B () { 
-	Msg m1, m2;
-	m1.src = current->pid;
-	int x = 0;
-	receive(4, &m2);
-	while(1) {
-		if(x % 10000000 == 0) {
-			printk("b"); 
-			send(4, &m1);
-			receive(4, &m2);
-		}
-		x ++;
-	}
-}
-void C () { 
-	Msg m1, m2;
-	m1.src = current->pid;
-	int x = 0;
-	receive(4, &m2);
-	while(1) {
-		if(x % 10000000 == 0) {
-			printk("c"); 
-			send(4, &m1);
-			receive(4, &m2);
-		}
-		x ++;
-	}
-}
-void D () { 
-	Msg m1, m2;
-	m1.src = current->pid;
-	receive(4, &m2);
-	int x = 0;
-	while(1) {
-		if(x % 10000000 == 0) {
-			printk("d"); 
-			send(4, &m1);
-			receive(4, &m2);
-		}
-		x ++;
-	}
-}
- 
-void E () {
-	Msg m1, m2;
-	m2.src = current->pid;
-	char c;
-	while(1) {
-		receive(MSG_TRGT_ANY, &m1);
-		if(m1.src == 0) {c = '|'; m2.dest = 1; }
-		else if(m1.src == 1) {c = '/'; m2.dest = 2;}
-		else if(m1.src == 2) {c = '-'; m2.dest = 3;}
-		else if(m1.src == 3) {c = '\\';m2.dest = 0;}
-		else assert(0);
- 
-		printk("\033[s\033[1000;1000H%c\033[u", c);
-		send(m2.dest, &m2);
-	}
- 
-}
-
 PCB*
 create_kthread(void *fun) {
   TrapFrame *tf=(TrapFrame *)(pcbpool[pcblen].kstack+4096-sizeof(TrapFrame));
@@ -210,71 +145,6 @@ create_kthread(void *fun) {
   return &pcbpool[pcblen++];
 }
 
-#define NBUF 5
-#define NR_PROD 3
-#define NR_CONS 4
- 
-int buf[NBUF], f = 0, r = 0, g = 1;
-int last = 0;
-Sem empty, full, mutex;
- 
-void
-test_producer(void) {
-	while (1) {
-		P(&empty);
-		P(&mutex);
-		if(g % 10000 == 0) {
-			printk(".");	// tell us threads are really working
-		}
-		buf[f ++] = g ++;
-		f %= NBUF;
-		V(&mutex);
-		V(&full);
-	}
-}
- 
-void
-test_consumer(void) {
-	int get;
-	while (1) {
-		P(&full);
-		P(&mutex);
-		get = buf[r ++];
-		assert(last == get - 1);	// the products should be strictly increasing
-		last = get;
-		r %= NBUF;
-		V(&mutex);
-		V(&empty);
-	}
-}
- 
-void
-test_setup(void) {
-	create_sem(&full, 0);
-	create_sem(&empty, NBUF);
-	create_sem(&mutex, 1);
-	int i;
-	for(i = 0; i < NR_PROD; i ++) {
-		wakeup(create_kthread(test_producer));
-	}
-	for(i = 0; i < NR_CONS; i ++) {
-		wakeup(create_kthread(test_consumer));
-	}
-}
-
-void testIDE(void) {
-	int i;
-	unsigned char buf[512];
-	dev_read("hda", current->pid, buf, 0, 512);
-	lock();
-	printk("MBR INFO:\n----------------------------\n");
-	for (i=0; i<512; i++)
-		printk("%x ", (int)buf[i]);
-	printk("\n----------------------------\n\n");
-	unlock();
-	sleep();
-}
-
 void
 init_proc() {
   initProcQ();
@@ -286,5 +156,7 @@ init_proc() {
   wakeup(create_kthread(D));
   wakeup(create_kthread(E));
   wakeup(create_kthread(testIDE));
+  wakeup(create_kthread(testForTimer));
+  wakeup(create_kthread(testRamdisk));
 }
 

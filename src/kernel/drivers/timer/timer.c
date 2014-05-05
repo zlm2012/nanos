@@ -3,17 +3,28 @@
 #include "hal.h"
 #include "time.h"
 #include "string.h"
+#include "adt/list.h"
 
 #define PORT_TIME 0x40
 #define PORT_RTC  0x70
 #define FREQ_8253 1193182
 #define CURRENT_YEAR 2014
+#define INTR_NOTIFY 200
 
 pid_t TIMER;
 static long jiffy = 0;
 static int century_register = 0x00;
 static Time rt;
 
+typedef struct timer {
+  int interval;
+  pid_t src;
+  bool va;
+  ListHead h;
+} Timer;
+
+static Timer tmrs[100];
+static ListHead th;
 static void update_jiffy(void);
 static void init_i8253(void);
 static void init_rt(void);
@@ -110,70 +121,99 @@ void read_rtc() {
 }
 
 void init_timer(void) {
-	init_i8253();
-	init_rt();
-	add_irq_handle(0, update_jiffy);
-	PCB *p = create_kthread(timer_driver_thread);
-	TIMER = p->pid;
-	wakeup(p);
-	hal_register("timer", TIMER, 0);
+  init_i8253();
+  init_rt();
+  add_irq_handle(0, update_jiffy);
+  PCB *p = create_kthread(timer_driver_thread);
+  TIMER = p->pid;
+  wakeup(p);
+  list_init(&th);
+  memset(tmrs, 0, sizeof(tmrs));
+  hal_register("timer", TIMER, 0);
 }
 
 static void
 timer_driver_thread(void) {
-	static Msg m;
+  static Msg m;
+  int i;
+  ListHead *itr;
+  Timer *t;
 	
-	while (true) {
-		receive(ANY, &m);
+  while (true) {
+    receive(ANY, &m);
 		
-		switch (m.type) {
-			default: assert(0);
-		}
+    switch (m.type) {
+    case NEW_TIMER:
+      i=0;
+      while(tmrs[i].va && i<100) i++;
+      tmrs[i].va=true;
+      tmrs[i].src=m.src;
+      tmrs[i].interval=m.i[0];
+      list_add_before(&th, &(tmrs[i].h));
+      break;
+    case INTR_NOTIFY:
+      list_foreach(itr, &th) {
+	t=list_entry(itr, Timer, h);
+	t->interval-=1;
+	if (t->interval==0) {
+	  t->va=false;
+	  list_del(itr);
+	  m.src=TIMER;
+	  m.dest=t->src;
+	  send(t->src, &m);
 	}
+      }
+      break;
+    default: assert(0);
+    }
+  }
 }
 
 long
 get_jiffy() {
-	return jiffy;
+  return jiffy;
 }
 
 static int
 md(int year, int month) {
-	bool leap = (year % 400 == 0) || (year % 4 == 0 && year % 100 != 0);
-	static int tab[13] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-	return tab[month] + (leap && month == 2);
+  bool leap = (year % 400 == 0) || (year % 4 == 0 && year % 100 != 0);
+  static int tab[13] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  return tab[month] + (leap && month == 2);
 }
 
 static void
 update_jiffy(void) {
-	jiffy ++;
-	if (jiffy % HZ == 0) {
-		rt.second ++;
-		if (rt.second >= 60) { rt.second = 0; rt.minute ++; }
-		if (rt.minute >= 60) { rt.minute = 0; rt.hour ++; }
-		if (rt.hour >= 24)   { rt.hour = 0;   rt.day ++;}
-		if (rt.day >= md(rt.year, rt.month)) { rt.day = 1; rt.month ++; } 
-		if (rt.month >= 13)  { rt.month = 1;  rt.year ++; }
-	}
+  jiffy ++;
+  Msg a;
+  a.type=INTR_NOTIFY;
+  if (jiffy % HZ == 0) {
+    rt.second ++;
+    if (rt.second >= 60) { rt.second = 0; rt.minute ++; }
+    if (rt.minute >= 60) { rt.minute = 0; rt.hour ++; }
+    if (rt.hour >= 24)   { rt.hour = 0;   rt.day ++;}
+    if (rt.day >= md(rt.year, rt.month)) { rt.day = 1; rt.month ++; } 
+    if (rt.month >= 13)  { rt.month = 1;  rt.year ++; }
+    send(TIMER, &a);
+  }
 }
 
 static void
 init_i8253(void) {
-	int count = FREQ_8253 / HZ;
-	assert(count < 65536);
-	out_byte(PORT_TIME + 3, 0x34);
-	out_byte(PORT_TIME, count & 0xff);
-	out_byte(PORT_TIME, count >> 8);	
+  int count = FREQ_8253 / HZ;
+  assert(count < 65536);
+  out_byte(PORT_TIME + 3, 0x34);
+  out_byte(PORT_TIME, count & 0xff);
+  out_byte(PORT_TIME, count >> 8);	
 }
 
 static void
 init_rt(void) {
-	memset(&rt, 0, sizeof(Time));
-	/* Insert code here to initialize current time correctly */
-	read_rtc();
+  memset(&rt, 0, sizeof(Time));
+  /* Insert code here to initialize current time correctly */
+  read_rtc();
 }
 
 void 
 get_time(Time *tm) {
-	memcpy(tm, &rt, sizeof(Time));
+  memcpy(tm, &rt, sizeof(Time));
 }
