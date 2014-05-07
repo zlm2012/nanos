@@ -18,6 +18,7 @@ static int caps, ctrl, alt, shft;
 void
 readkey(void) {
 	uint32_t code = in_byte(0x60);
+	uint8_t good = 0x02;
 	in_byte(0x61);
 	printk("%s, %d: keycode = %d\n", __FUNCTION__, __LINE__, code);
 	add_keyboard_randomness((unsigned char)code);
@@ -58,7 +59,11 @@ readkey(void) {
 				consl_feed(current_consl, code); break;
 			case K_F12:
 				printk("\33[1;31mWill now reboot.\33[0m\n");
-				asm volatile("movl $0, %esp; pushl $0");
+				//asm volatile("movl $0, %esp; pushl $0");
+				while (good & 0x02)
+					good = in_byte(0x64);
+				out_byte(0x64, 0xFE);
+				wait_intr();
 				assert(0);
 				break;
 			case K_LSHFT: shft ++; break;
