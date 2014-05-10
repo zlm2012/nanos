@@ -117,6 +117,9 @@ typedef struct TrapFrame {
 	uint32_t esp, ss;									// only uses when DPL = 3
 } TrapFrame;
 
+#define KRN_MEM  (const void **)0x10004
+#define MEM_INF  (const void **)0x10000
+
 #endif
 
 #endif

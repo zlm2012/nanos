@@ -21,6 +21,37 @@ start:
 	movw    $0x2401, %ax      # Enable A20 line by BIOS
 	int     $0x15
 
+	movw	$0x1000, %ax
+	movw	%ax, %es
+	movw	$0x0000, %di
+meme801:
+	stc					# fix to work around buggy
+	xorw	%cx,%cx				# BIOSes which dont clear/set
+	xorw	%dx,%dx				# carry on pass/error of
+						# e801h memory size call
+						# or merely pass cx,dx though
+						# without changing them.
+	movw	$0xe801, %ax
+	int	$0x15
+
+	cmpw	$0x0, %cx			# Kludge to handle BIOSes
+	jne	e801usecxdx			# which report their extended
+	cmpw	$0x0, %dx			# memory in AX/BX rather than
+	jne	e801usecxdx			# CX/DX.  The spec I have read
+	movw	%ax, %cx			# seems to indicate AX/BX 
+	movw	%bx, %dx			# are more reasonable anyway...
+
+e801usecxdx:
+	andl	$0xffff, %edx			# clear sign extend
+	shll	$16, %edx			# and go from 64k to 1k chunks
+	movl	%edx, %es:0(%di)			# store extended memory size
+	andl	$0xffff, %ecx
+	shll	$10, %ecx
+	addl	$1048576, %ecx			# clear sign extend
+ 	movl	%ecx, %es:4(%di)			# and add lower memory into
+						# total size.
+
+
 	# Make an "identical mapping" from virtual address to physical address.
 	# We have already prepared a GDT in the 
 	lgdt    gdtdesc           # See i386 manual for more information

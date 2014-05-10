@@ -6,14 +6,14 @@ pid_t FILEMAN;
 
 static void fm_thread(void);
 
-static inline void
+static inline int
 do_read(int filename, uint8_t *buf, off_t offset, size_t len) {
-  dev_read("ram", current->pid, buf, filename*NR_FILE_SIZE+offset, len);
+  return dev_read("ram", current->pid, buf, filename*NR_FILE_SIZE+offset, len);
 }
 
-static inline void
+static inline int
 do_write(int filename, uint8_t *buf, off_t offset, size_t len) {
-  dev_write("ram", current->pid, buf, filename*NR_FILE_SIZE+offset, len);
+  return dev_write("ram", current->pid, buf, filename*NR_FILE_SIZE+offset, len);
 }
 
 void
@@ -31,14 +31,12 @@ fm_thread(void) {
     receive(ANY, &m);
 
     if (m.type == DO_READ) {
-      do_read(m.dev_id, m.buf, m.offset, m.len);
-      m.ret = 0;
+      m.ret=do_read(m.dev_id, m.buf, m.offset, m.len);
       m.dest = m.src;
       m.src = FILEMAN;
       send(m.dest, &m);
     } else if (m.type == DO_WRITE) {
-      do_write(m.dev_id, m.buf, m.offset, m.len);
-      m.ret = 0;
+      m.ret=do_write(m.dev_id, m.buf, m.offset, m.len);
       m.dest = m.src;
       m.src = FILEMAN;
       send(m.dest, &m);

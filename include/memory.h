@@ -14,6 +14,9 @@ void make_invalid_pte(PTE *);
 void make_pde(PDE *, void *);
 void make_pte(PTE *, void *);
 
+void* get_page(size_t size);
+void free_page(void* pa, size_t size);
+
 #define va_to_pa(addr) \
 	((void*)(((uint32_t)(addr)) - KOFFSET))
 

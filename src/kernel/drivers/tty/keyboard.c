@@ -20,7 +20,7 @@ readkey(void) {
 	uint32_t code = in_byte(0x60);
 	uint8_t good = 0x02;
 	in_byte(0x61);
-	printk("%s, %d: keycode = %d\n", __FUNCTION__, __LINE__, code);
+	//printk("%s, %d: keycode = %d\n", __FUNCTION__, __LINE__, code);
 	add_keyboard_randomness((unsigned char)code);
 
 	if (code >= 128) {

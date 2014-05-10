@@ -11,6 +11,8 @@ void init_intr(void);
 void init_proc(void);
 void init_driver(void);
 void init_fm(void);
+void init_bitmap();
+void print_bitmap();
 void welcome(void);
 
 void os_init_cont(void);
@@ -68,6 +70,8 @@ out_byte(PORT_TIME    , count / 256);
 
 	init_fm();
 
+	init_bitmap();
+
 	welcome();
 
 	sti();
@@ -81,4 +85,27 @@ out_byte(PORT_TIME    , count / 256);
 void
 welcome(void) {
 	printk("Hello, OS World!\n");
+	printk("Higher Memory Size: %x, Lower Memory Size: %x\n", *((int*)0x10000), *((int*)0x10004));
+	int *i = (int *)(*((int*)0x10004)-16);
+	int *a, *b;
+	i=(int *)kmalloc(sizeof(int));
+	printk("kmalloc test #1... %s\n", i?"SUCCEED":"FAILED");
+	if(i){printk("address: %p, %d\n", i, *i);*i=1;}
+	a=(int *)kmalloc(sizeof(int));
+	printk("kmalloc test #2... %s\n", a?"SUCCEED":"FAILED");
+	if(a){printk("address: %p, %d\n", a, *a);*a=2;}
+	b=(int *)kmalloc(sizeof(int));
+	printk("kmalloc test #3... %s\n", b?"SUCCEED":"FAILED");
+	if(b){printk("address: %p, %d\n", b, *b);*b=3;}
+	kfree(a);
+	a=(int *)kmalloc(sizeof(int));
+	printk("kmalloc test #4... %s\n", a?"SUCCEED":"FAILED");
+	if(a){printk("address: %p, %d\n", a, *a);*a=4;}
+	kfree(a);
+	kfree(b);
+	kfree(i);
+	i=(int *)kmalloc(sizeof(int));
+	printk("kmalloc test #5... %s\n", i?"SUCCEED":"FAILED");
+	if(i){printk("address: %p, %d\n", i, *i);*i=5;}
+	kfree(i);
 }
