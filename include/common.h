@@ -10,5 +10,6 @@ void kfree(void* ap);
 
 #include "assert.h"
 
+#define SYS_puts 101
 
 #endif

@@ -4,6 +4,8 @@
 
 extern pid_t TIMER;
 extern pid_t FILEMAN;
+extern pid_t MEMMAN;
+extern PDE updir[][NR_PDE];
 void A () { 
 	Msg m1, m2;
 	m1.src = current->pid;
@@ -196,3 +198,154 @@ void testRamdisk(void) {
 	sleep();
 }
 
+void testMM(void) {
+	Msg m;
+	int* i=(int*)(0x08048000);
+	m.src=current->pid;
+	m.dest=MEMMAN;
+	m.type=NEW_PAGE;
+	m.req_pid=13;
+	m.len=0x345;
+	m.buf=(void*)0x08048000;
+	send(MEMMAN, &m);
+	receive(MEMMAN, &m);
+	*i=500;
+	printk("Test for MM #1: %d, %p\n", *i, i);
+	i=(int*)(0x08048345);
+	*i=501;
+	printk("Test for MM #2: %d, %p\n", *i, i);
+	m.src=current->pid;
+	m.dest=MEMMAN;
+	m.type=NEW_PAGE;
+	m.req_pid=13;
+	m.len=0x1345;
+	m.buf=(void*)0x08049000;
+	send(MEMMAN, &m);
+	receive(MEMMAN, &m);
+	i=(int*)(0x08049345);
+	*i=502;
+	printk("Test for MM #3: %d, %p\n", *i, i);
+	i=(int*)(0x0804a345);
+	*i=503;
+	printk("Test for MM #4: %d, %p\n", *i, i);
+	m.src=current->pid;
+	m.dest=MEMMAN;
+	m.type=NEW_PAGE;
+	m.req_pid=13;
+	m.len=0x1000;
+	m.buf=(void*)0xbffff000;
+	printk("Test Allocating Stack...\n");
+	send(MEMMAN, &m);
+	receive(MEMMAN, &m);
+	i=(int*)(0xbffffffc);
+	*i=504;
+	printk("Test for MM #5: %d, %p\n", *i, i);
+	m.src=current->pid;
+	m.dest=MEMMAN;
+	m.type=FREE_PAGE;
+	m.req_pid=13;
+	send(MEMMAN, &m);
+	receive(MEMMAN, &m);
+	printk("Test for MM: PAGE FREED, then there should be an Exception #14\n");
+	*i=9;
+}
+
+void testEmpty(void) {
+	lock();
+	current->cr3.val=0;
+	current->cr3.page_directory_base=((uint32_t)va_to_pa(updir[0]))>>12;
+	printk("Usr Proc Pid: %d, CR3 BASE: %x\n", current->pid, current->cr3.page_directory_base);
+	write_cr3(&(current->cr3));
+	unlock();
+	sleep();
+}
+
+void testPuts(void) {
+	char* a="Test To Write Out!\n";
+	int ret;
+	while(1) {
+		Msg m;
+		m.src=current->pid;
+		m.dest=TIMER;
+		m.type=NEW_TIMER;
+		m.i[0]=1;
+		send(TIMER, &m);
+		receive(TIMER, &m);
+		asm volatile("int $0x80": "=r"(ret) : "a"(SYS_puts), "b"(a));
+		printk("Test writing out complete: %d\n", ret);
+	}
+}
+
+void testUsrProc(void) {
+	Msg m;
+	uint8_t *i, *va, *ka;
+	char buf[512];
+	ELFHeader *elf=(ELFHeader*)buf;
+	ProgHeader *ph, *eph;
+	PCB* p=new_pcb();
+	p->cr3.val=0;
+	p->cr3.page_directory_base=((uint32_t)va_to_pa(updir[p->pid-13]))>>12;
+	m.src=current->pid;
+	printk("Usr Proc Pid: %d, CR3 BASE: %x\n", p->pid, p->cr3.page_directory_base);
+	m.dest=FILEMAN;
+	m.type=DO_READ;
+	m.dev_id=0;
+	m.buf=buf;
+	m.offset=0;
+	m.len=512;
+	send(FILEMAN, &m);
+	receive(FILEMAN, &m);
+	ph=(ProgHeader*)(buf + elf->phoff);
+	eph = ph + elf->phnum;
+	for(; ph < eph; ph ++) {
+		va = (unsigned char*)(ph->vaddr);
+		if(va==0)continue;
+		m.src=current->pid;
+		m.dest=MEMMAN;
+		m.type=NEW_PAGE;
+		m.req_pid=p->pid;
+		m.len=ph->memsz;
+		m.buf=va;
+		send(MEMMAN, &m);
+		receive(MEMMAN, &m);
+		ka=(void*)m.ret;
+		printk("Entry KA: %p, Caculated KA: %p\n", (nndma_to_ka(p->cr3.val, 0x080480a0)), ka);
+		m.src=current->pid;
+		m.dest=FILEMAN;
+		m.type=DO_READ;
+		m.dev_id=0;
+		m.buf=ka;
+		m.offset=ph->off;
+		m.len=ph->filesz;
+		printk("Program Read: Offset: %x, Len: %x\n", m.offset, m.len);
+		send(FILEMAN, &m);
+		receive(FILEMAN, &m);
+		for (i = ka + ph->filesz; i < ka + ph->memsz; *i ++ = 0);
+	}
+	m.src=current->pid;
+	m.dest=MEMMAN;
+	m.type=NEW_PAGE;
+	m.req_pid=p->pid;
+	m.len=4096;
+	m.buf=(void*)0xBFFFF000;
+	send(MEMMAN, &m);
+	receive(MEMMAN, &m);
+	TrapFrame *tf=(TrapFrame *)(m.ret+0x1000-sizeof(TrapFrame));
+	p->tf=tf;
+	p->lock=0;
+	p->lockif=0;
+	list_init(&(p->msgq));
+	create_sem(&(p->msem), 0);
+	tf->eip=elf->entry;
+	tf->cs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_CODE);
+	tf->ds=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
+	tf->es=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
+	tf->fs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
+	tf->gs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
+	tf->xxx=(uint32_t)&(tf->gs);
+	tf->eflags=512;
+	tf=(TrapFrame *)(0xc0000000-sizeof(TrapFrame));
+	wakeup(p);
+	printk("USR PROC CREATED!!!\n");
+	sleep();
+}

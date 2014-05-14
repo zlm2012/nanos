@@ -8,6 +8,7 @@ void send_keymsg(void);
 
 void init_console(void);
 void init_getty(void);
+const char* get_current_tty(void);
 static void ttyd(void);
 
 void init_tty(void) {
@@ -59,8 +60,7 @@ ttyd(void) {
 					m.src = current->pid;
 					send(dest, &m);
 					break;
-				default: //assert(0);
-					panic("assert failed in ttyd. m.src=%x m.dest=%x\n", m.src, m.dest);
+				default: assert(0);
 			}
 		}
 	}

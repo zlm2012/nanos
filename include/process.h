@@ -4,6 +4,9 @@
 #define MSG_TRGT_ANY -1
 #define MSG_HARD_INTR -2
 #define ANY -1
+#define NR_PROC 50
+#define NEW_PROC 301
+#define DSTRY_PROC 302
 #include "adt/list.h"
 #include "common.h"
 #include "string.h"
@@ -12,6 +15,14 @@ typedef struct Semaphore {
   int token;
   ListHead block;
 }Sem;
+
+typedef struct memdist {
+  void* caddr;
+  uint32_t csize;
+  void* daddr;
+  uint32_t dsize;
+  void* saddr;
+}memdist;
 
 typedef union PCB {
   uint8_t kstack[KSTACK_SIZE];
@@ -22,6 +33,8 @@ typedef union PCB {
     ListHead msgq;
     Sem msem;
     pid_t pid;
+    memdist paged;
+    CR3 cr3;
   };
 } PCB;
 
@@ -73,7 +86,7 @@ lock() {
 
 static inline void
 unlock() {
-  (current->lock)--;
+  if(current->lock)(current->lock)--;
   assert(current->lock>=0);
   if(current->lockif && current->lock==0) sti();
 }
@@ -130,6 +143,12 @@ RCV_FAILED:
     P(&(current->msem));
     //walked++;
   }
+}
+
+static inline PCB*
+new_pcb(void) {
+  pcbpool[pcblen].pid=pcblen;
+  return &pcbpool[pcblen++];
 }
 
 #endif

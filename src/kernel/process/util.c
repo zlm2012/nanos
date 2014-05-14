@@ -13,9 +13,15 @@ extern void test_setup();
 extern void testForTimer();
 extern void testIDE();
 extern void testRamdisk();
+extern void testMM();
+extern void testEmpty();
+extern void testPuts();
+extern void testUsrProc();
+
+pid_t PROCMAN;
 
 int pcblen = 0, msglen=0;
-PCB pcbpool[50];
+PCB pcbpool[NR_PROC];
 MsgPU msgpool[500];
 typedef struct PCBQ {
   PCB* pcb;
@@ -81,7 +87,7 @@ void sleep(void) {
       list_entry(i, PCBQ, li)->va=0;
       list_del(i);
       enterProcQ(true, current, &stallhead);
-      asm volatile("int $0x80");
+      asm volatile("int $0x80"::"a"(0));
       break;
     }
   unlock();
@@ -132,6 +138,7 @@ create_kthread(void *fun) {
   pcbpool[pcblen].lock=0;
   pcbpool[pcblen].lockif=0;
   pcbpool[pcblen].pid=pcblen;
+  pcbpool[pcblen].cr3.val=get_kcr3()->val;
   list_init(&(pcbpool[pcblen].msgq));
   create_sem(&(pcbpool[pcblen].msem), 0);
   tf->eip=(uint32_t)fun;
@@ -150,13 +157,27 @@ init_proc() {
   initProcQ();
   //test_setup();
   //wakeup(&pcbpool[0]);
-  wakeup(create_kthread(A));
-  wakeup(create_kthread(B));
-  wakeup(create_kthread(C));
-  wakeup(create_kthread(D));
-  wakeup(create_kthread(E));
-  wakeup(create_kthread(testIDE));
-  wakeup(create_kthread(testForTimer));
-  wakeup(create_kthread(testRamdisk));
+  //wakeup(create_kthread(A));
+  //wakeup(create_kthread(B));
+  //wakeup(create_kthread(C));
+  //wakeup(create_kthread(D));
+  //wakeup(create_kthread(E));
+  //wakeup(create_kthread(testIDE));
+  //wakeup(create_kthread(testForTimer));
+  //wakeup(create_kthread(testRamdisk));
 }
 
+void
+init_kthread() {
+  //wakeup(create_kthread(testMM));
+  //wakeup(create_kthread(testEmpty));
+  //wakeup(create_kthread(testUsrProc));
+  Msg m;
+  m.dest=PROCMAN;
+  m.src=-2;
+  m.dev_id=0;
+  m.type=NEW_PROC;
+  send(PROCMAN, &m);
+  m.dev_id=1;
+  send(PROCMAN, &m);
+}

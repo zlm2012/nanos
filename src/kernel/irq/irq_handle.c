@@ -14,6 +14,9 @@
    slots periodically. So the IDE driver also calls add_irq_handle
    to register a handler. */
 
+const char* get_current_tty(void);
+char* bare_syscall_test="Bare Syscall Test...\n";
+
 struct IRQ_t {
 	void (*routine)(void);
 	struct IRQ_t *next;
@@ -45,7 +48,22 @@ void irq_handle(TrapFrame *tf) {
 	}
 
 	if (irq == 0x80) {
-		
+		switch(tf->eax) {
+		case 0:
+			break;
+		case 1:
+			tf->eax=dev_write(get_current_tty(), current->pid, bare_syscall_test, 0, strlen(bare_syscall_test));
+			current->tf=tf;
+			return;
+			break;
+		case SYS_puts:
+			tf->eax=dev_write(get_current_tty(), current->pid, (void*)(tf->ebx), 0, strlen((const char*)(tf->ebx)));
+			current->tf=tf;
+			return;
+			break;
+		default:
+			assert(0);
+		}
 	} else if (irq < 1000) {
 		extern uint8_t logo[];
 		printk("Errorcode: %d\n", tf->error_code);

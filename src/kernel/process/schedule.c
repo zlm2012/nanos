@@ -18,4 +18,5 @@ schedule(void) {
   }
   current=leaveProcQ(&readyhead, &readylen);
   enterProcQ(false, current, &readyhead);
+  write_cr3(&(current->cr3));
 }

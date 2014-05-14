@@ -54,6 +54,8 @@ init_page(void) {
 		}
 	}
 
+	//make_pde(&pdir[0x08048000/PD_SIZE], (PTE *)va_to_pa(kptable)+(0x01000000>>12));
+	
 	/* make CR3 to be the entry of page directory */
 	cr3.val = 0;
 	cr3.page_directory_base = ((uint32_t)pdir) >> 12;
