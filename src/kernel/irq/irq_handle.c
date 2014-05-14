@@ -15,6 +15,8 @@
    to register a handler. */
 
 const char* get_current_tty(void);
+void flush();
+void putsbuf(char);
 char* bare_syscall_test="Bare Syscall Test...\n";
 
 struct IRQ_t {
@@ -63,6 +65,12 @@ void irq_handle(TrapFrame *tf) {
 			break;
 		case SYS_exit:
 			do_exit(tf->ebx, current->pid);
+			break;
+		case SYS_printf:
+			tf->eax=vfprintf(putsbuf, (const char*)tf->ebx, (void**)tf->ecx);
+			flush();
+			current->tf=tf;
+			return;
 			break;
 		default:
 			assert(0);

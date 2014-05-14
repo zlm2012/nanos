@@ -1,7 +1,8 @@
 #include "stdio.h"
 
 int main() {
-	puts("Hello World!\n");
+	printf("Hello World!\n");
+	printf("Just test for arguement: %d\n", 200);
 
 	return 0;
 }

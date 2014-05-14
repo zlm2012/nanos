@@ -194,5 +194,5 @@ init_kthread() {
   m.type=NEW_PROC;
   send(PROCMAN, &m);
   m.dev_id=1;
-  send(PROCMAN, &m);
+  //send(PROCMAN, &m);
 }
