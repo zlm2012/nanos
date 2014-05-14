@@ -45,10 +45,10 @@ init_page(void) {
 
 	pframe_idx = 0;
 	for (pdir_idx = 0; pdir_idx < PHY_MEM / PD_SIZE; pdir_idx ++) {
-		make_pde(&pdir[pdir_idx], ptable);
-		make_pde(&pdir[pdir_idx + KOFFSET / PD_SIZE], ptable);
+		make_pde(&pdir[pdir_idx], ptable, 0);
+		make_pde(&pdir[pdir_idx + KOFFSET / PD_SIZE], ptable, 0);
 		for (ptable_idx = 0; ptable_idx < NR_PTE; ptable_idx ++) {
-			make_pte(ptable, (void*)(pframe_idx << 12));
+			make_pte(ptable, (void*)(pframe_idx << 12), 0, 1);
 			pframe_idx ++;
 			ptable ++;
 		}

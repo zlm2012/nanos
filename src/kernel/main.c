@@ -19,8 +19,6 @@ void welcome(void);
 
 void os_init_cont(void);
 
-extern int pcblen;
-
 void
 os_init(void) {
 	/* Notice that when we are here, IF is always 0 (see bootloader) */
@@ -94,11 +92,4 @@ out_byte(PORT_TIME    , count / 256);
 void
 welcome(void) {
 	printk("Hello, OS World!\n");
-	printk("Process Number: %d\n", pcblen);
-	//int* i=(int*)(0x08048000);
-	//*i=500;
-	//printk("Test User Space #1: %d, %p\n", *i, i);
-	//i++;
-	//*i=502;
-	//printk("Test User Space #2: %d, %p\n", *i, i);
 }

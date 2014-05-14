@@ -13,15 +13,15 @@ init_mm(void) {
   int pdir_idx;
   PTE *ptable=(PTE*)va_to_pa(get_kptable());
   for (pdir_idx=0; pdir_idx<PHY_MEM/PD_SIZE; pdir_idx++) {
-    make_pde(&updir[0][pdir_idx+KOFFSET/PD_SIZE], ptable);
+    make_pde(&updir[0][pdir_idx+KOFFSET/PD_SIZE], ptable, 0);
     ptable+=NR_PTE;
   }
   for (pdir_idx=1; pdir_idx<NR_PROC-13; pdir_idx++)
     memcpy(updir[pdir_idx], updir[0], NR_PDE*sizeof(PDE));
   memset(uptable, 0, sizeof(uptable));
   for (pdir_idx=0; pdir_idx<NR_PROC-13; pdir_idx++) {
-    make_pde(&updir[pdir_idx][0x08048000/PD_SIZE], va_to_pa(uptable[pdir_idx]));
-    make_pde(&updir[pdir_idx][KOFFSET/PD_SIZE-1], va_to_pa(&uptable[pdir_idx][NR_PTE]));
+    make_pde(&updir[pdir_idx][0x08048000/PD_SIZE], va_to_pa(uptable[pdir_idx]), 1);
+    make_pde(&updir[pdir_idx][KOFFSET/PD_SIZE-1], va_to_pa(&uptable[pdir_idx][NR_PTE]), 1);
   }
   PCB *p = create_kthread(mm_thread);
   MEMMAN = p->pid;
@@ -31,7 +31,7 @@ init_mm(void) {
 static void
 mm_thread(void) {
   static Msg m;
-  int i, j, len;
+  int i, j, len, rw;
   void* pa, *ipa;
   memdist* md;
 
@@ -47,18 +47,20 @@ mm_thread(void) {
       if(((uint32_t)m.buf)/PD_SIZE==0x08048000/PD_SIZE) {
 	while(uptable[m.req_pid-13][j].present&&len>0)len--, j++;
 	if(len)pa=get_page(len);
-	if(j==0) {
+	if(j==0x48) {
 	  fetch_pcb(m.req_pid)->paged.caddr=pa;
 	  fetch_pcb(m.req_pid)->paged.csize=len;
 	} else {
 	  fetch_pcb(m.req_pid)->paged.daddr=pa;
 	  fetch_pcb(m.req_pid)->paged.dsize=len;
 	}
+        if((((uint32_t)m.buf)&(~0xfff))!=0x08048000) rw=1;
+        else rw=0;
 	for(ipa=pa,i=0; i<len; i++, j++, ipa+=PAGE_SIZE)
-	  make_pte(&uptable[m.req_pid-13][j], ipa);
+	  make_pte(&uptable[m.req_pid-13][j], ipa, 1, rw);
       } else if (((uint32_t)m.buf)/PD_SIZE==KOFFSET/PD_SIZE-1) {
 	if (uptable[m.req_pid-13][2*NR_PTE-1].val==0) {
-	  make_pte(&uptable[m.req_pid-13][2*NR_PTE-1], pa=get_page(1));
+	  make_pte(&uptable[m.req_pid-13][2*NR_PTE-1], pa=get_page(1), 1, 1);
 	  fetch_pcb(m.req_pid)->paged.saddr=pa;
 	}
       } else panic("MM failed: %p, %d\n", m.buf, m.len);
@@ -67,7 +69,7 @@ mm_thread(void) {
       m.ret = (uint32_t)pa_to_va(pa);
       send(m.dest, &m);
     } else if (m.type == FREE_PAGE) {
-      memset(uptable[m.req_pid], 0, 2*NR_PTE*sizeof(PTE));
+      memset(uptable[m.req_pid-13], 0, 2*NR_PTE*sizeof(PTE));
       md=&(fetch_pcb(m.req_pid)->paged);
       free_page(md->caddr, md->csize);
       free_page(md->daddr, md->dsize);

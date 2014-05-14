@@ -1,11 +1,7 @@
-volatile int x = 0;
+#include "stdio.h"
+
 int main() {
-	while(1) {
-		if(x % 10000000 == 0) {
-			asm volatile("movl $1, %eax; int $0x80");
-		}
- 
-		x ++;
-	}
+	puts("Hello World!\n");
+
 	return 0;
 }

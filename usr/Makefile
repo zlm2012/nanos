@@ -10,7 +10,7 @@ SFILES  = $(shell find src/ -name "*.S")
 OBJS    = $(CFILES:.c=.o) $(SFILES:.S=.o)
 
 usr: $(OBJS)
-	$(LD) $(LDFLAGS) -e main -o usr $(OBJS)
+	$(LD) $(LDFLAGS) -e _init -o usr $(OBJS)
 	objdump -D usr > code.txt	# disassemble result
 	readelf -a usr > elf.txt		# obtain more information about the executable
 

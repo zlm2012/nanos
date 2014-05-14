@@ -11,6 +11,8 @@
 #include "common.h"
 #include "string.h"
 
+pid_t PROCMAN;
+
 typedef struct Semaphore {
   int token;
   ListHead block;
@@ -35,11 +37,11 @@ typedef union PCB {
     pid_t pid;
     memdist paged;
     CR3 cr3;
+    bool va;
   };
 } PCB;
 
 extern PCB pcbpool[];
-extern int pcblen;
 
 typedef struct Message {
   pid_t src, dest;
@@ -106,8 +108,8 @@ static inline void
 send(pid_t dest, Msg *m) {
   int i;
   lock();
-  assert(dest<pcblen);
   assert(msglen<500);
+  if (pcbpool[dest].va==false)return;
   i=0;
   while(msgpool[i].va) i++;
   msgpool[i].va=true;
@@ -147,8 +149,26 @@ RCV_FAILED:
 
 static inline PCB*
 new_pcb(void) {
-  pcbpool[pcblen].pid=pcblen;
-  return &pcbpool[pcblen++];
+  int i;
+  for(i=0; pcbpool[i].va && i<NR_PROC; i++);
+  assert(i<NR_PROC);
+  pcbpool[i].pid=i;
+  pcbpool[i].va=true;
+  return &pcbpool[i];
 }
+
+static inline void
+do_exit(int status, pid_t pid) {
+  Msg m;
+  m.src=pid;
+  m.dest=PROCMAN;
+  m.type=DSTRY_PROC;
+  m.req_pid=pid;
+  send(PROCMAN, &m);
+  receive(PROCMAN, &m);
+  assert(0);
+}
+
+void free_pcb(pid_t pid);
 
 #endif

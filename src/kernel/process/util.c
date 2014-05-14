@@ -18,9 +18,7 @@ extern void testEmpty();
 extern void testPuts();
 extern void testUsrProc();
 
-pid_t PROCMAN;
-
-int pcblen = 0, msglen=0;
+int msglen=0;
 PCB pcbpool[NR_PROC];
 MsgPU msgpool[500];
 typedef struct PCBQ {
@@ -97,6 +95,7 @@ void wakeup(PCB *p) {
   lock();
   ListHead* i;
   bool new=true;
+  if (p->va==false) {unlock(); return;}
   list_foreach(i, &stallhead)
     if (list_entry(i, PCBQ, li)->pcb==p) {
       stalllen--;
@@ -133,14 +132,14 @@ void V(Sem *s) {
 
 PCB*
 create_kthread(void *fun) {
-  TrapFrame *tf=(TrapFrame *)(pcbpool[pcblen].kstack+4096-sizeof(TrapFrame));
-  pcbpool[pcblen].tf=tf;
-  pcbpool[pcblen].lock=0;
-  pcbpool[pcblen].lockif=0;
-  pcbpool[pcblen].pid=pcblen;
-  pcbpool[pcblen].cr3.val=get_kcr3()->val;
-  list_init(&(pcbpool[pcblen].msgq));
-  create_sem(&(pcbpool[pcblen].msem), 0);
+  PCB* pcb=new_pcb();
+  TrapFrame *tf=(TrapFrame *)(pcb->kstack+4096-sizeof(TrapFrame));
+  pcb->tf=tf;
+  pcb->lock=0;
+  pcb->lockif=0;
+  pcb->cr3.val=get_kcr3()->val;
+  list_init(&(pcb->msgq));
+  create_sem(&(pcb->msem), 0);
   tf->eip=(uint32_t)fun;
   tf->cs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_CODE);
   tf->ds=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
@@ -149,7 +148,23 @@ create_kthread(void *fun) {
   tf->gs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
   tf->xxx=(uint32_t)&(tf->gs);
   tf->eflags=512;
-  return &pcbpool[pcblen++];
+  return pcb;
+}
+
+void
+free_pcb(pid_t pid) {
+  lock();
+  ListHead* i;
+  list_foreach(i, &stallhead)
+    if (list_entry(i, PCBQ, li)->pcb->pid==pid) {
+      stalllen--;
+      list_entry(i, PCBQ, li)->va=0;
+      list_del(i);
+      break;
+    }
+  pcbpool[pid].va=false;
+  printk("PID %d FREED: %s\n", pid, (fetch_pcb(pid)->va)?"TRUE":"FALSE");
+  unlock();
 }
 
 void

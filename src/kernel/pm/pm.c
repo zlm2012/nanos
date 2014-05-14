@@ -79,30 +79,28 @@ pm_thread(void) {
       list_init(&(p->msgq));
       create_sem(&(p->msem), 0);
       tf->eip=elf->entry;
-      tf->cs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_CODE);
-      tf->ds=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
-      tf->es=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
-      tf->fs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
-      tf->gs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
-      tf->xxx=(uint32_t)&(tf->gs);
+      tf->cs=(uint32_t)SELECTOR_USER(SEG_USER_CODE);
+      tf->ds=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+      tf->es=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+      tf->fs=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+      tf->gs=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+      tf->esp=0xbfffffff;
       tf->eflags=512;
-      tf=(TrapFrame *)(0xc0000000-sizeof(TrapFrame));
+      tf->ss=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
       wakeup(p);
       m.dest=osrc;
       m.src=PROCMAN;
       m.ret=1;
+      printk("User Process %d Created.\n", p->pid);
       if(m.dest>=0) send(m.dest, &m);
-    }/* else if (m.type == DSTRY_PROC) {
-	memset(uptable[m.req_pid], 0, 2*NR_PTE*sizeof(PTE));
-	md=&(fetch_pcb(m.req_pid)->paged);
-	free_page(md->caddr, md->csize);
-	free_page(md->daddr, md->dsize);
-	free_page(md->saddr, 1);
-	m.ret=0;
-	m.dest = m.src;
-	m.src = MEMMAN;
-	send(m.dest, &m);
-	}*/
+    } else if (m.type == DSTRY_PROC) {
+      m.src=PROCMAN;
+      m.dest=MEMMAN;
+      m.type=FREE_PAGE;
+      send(MEMMAN, &m);
+      receive(MEMMAN, &m);
+      free_pcb(m.req_pid);
+    }
     else {
       assert(0);
     }

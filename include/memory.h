@@ -13,8 +13,8 @@ inline PTE* get_kptable();
 
 void make_invalid_pde(PDE *);
 void make_invalid_pte(PTE *);
-void make_pde(PDE *, void *);
-void make_pte(PTE *, void *);
+void make_pde(PDE *, void *, int);
+void make_pte(PTE *, void *, int, int);
 
 void* get_page(size_t size);
 void free_page(void* pa, size_t size);
