@@ -1,9 +1,9 @@
-/* start.S has put the processor into protected 32-bit mode,
+/* start.S and boot.S has put the processor into protected 32-bit mode,
 	 and set up the right segmentation. The layout of our hard
 	 disk is shown below:
-	 +-----------+------------------.        .-----------------+
-	 | bootblock |  The game binary    ...     (in ELF format) |
-	 +-----------+------------------`        '-----------------+
+	 +----------+------------+------------+------------------.        .-----------------+
+	 | bootsect | bootloader | DOS Compat | The kernel binary    ...     (in ELF format)|
+	 +----------+------------+------------+------------------`        '-----------------+
 	 So the task of the C code is to load the game binary into
 	 correct memory location (0x100000), and jump to it. */
 
@@ -75,7 +75,7 @@ readseg(unsigned char *pa, int count, int offset) {
 	unsigned char *epa;
 	epa = pa + count;
 	pa -= offset % SECTSIZE;
-	offset = (offset / SECTSIZE) + 1;
+	offset = (offset / SECTSIZE) + 63;
 	for(; pa < epa; pa += SECTSIZE, offset ++)
 		readsect(pa, offset);
 }

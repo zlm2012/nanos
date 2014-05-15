@@ -5,8 +5,9 @@ a.out
 *.ans
 *.img
 *.txt
-*.*~
-/boot/bootblock
+*~
+/boot/bootsect
+/boot/bootloader
 /boot/Makefile~
 /kernel
 *.vdi

@@ -18,7 +18,7 @@ debug: disk.img
 
 disk.img: kernel
 	@cd boot; make
-	cat boot/bootblock kernel > disk.img
+	cat boot/bootsect boot/bootloader kernel > disk.img
 
 kernel: $(OBJS)
 	$(LD) $(LDFLAGS) -e os_init -Ttext 0xC0100000 -o kernel $(OBJS)
