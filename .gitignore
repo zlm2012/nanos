@@ -7,4 +7,6 @@ a.out
 *.txt
 *.*~
 /boot/bootblock
+/boot/Makefile~
 /kernel
+*.vdi
