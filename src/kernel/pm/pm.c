@@ -14,6 +14,19 @@ init_pm(void) {
   wakeup(p);
 }
 
+void* new_page(pid_t req_id, size_t len, void* va) {
+  Msg m;
+  m.src=current->pid;
+  m.dest=MEMMAN;
+  m.type=NEW_PAGE;
+  m.req_pid=req_id;
+  m.len=len;
+  m.buf=va;
+  send(MEMMAN, &m);
+  receive(MEMMAN, &m);
+  return (void*)m.ret;
+}
+
 static void
 pm_thread(void) {
   static Msg m;
@@ -32,62 +45,18 @@ pm_thread(void) {
       p=new_pcb();
       p->cr3.val=0;
       p->cr3.page_directory_base=((uint32_t)va_to_pa(updir[p->pid-13]))>>12;
-      m.src=current->pid;
-      m.dest=FILEMAN;
-      m.type=DO_READ;
-      m.buf=buf;
-      m.offset=0;
-      m.len=512;
-      send(FILEMAN, &m);
-      receive(FILEMAN, &m);
+      read_file(m.dev_id, buf, 0, 512);
       ph=(ProgHeader*)(buf + elf->phoff);
       eph = ph + elf->phnum;
       for(; ph < eph; ph ++) {
 	va = (unsigned char*)(ph->vaddr);
 	if(va==0)continue;
-	m.src=current->pid;
-	m.dest=MEMMAN;
-	m.type=NEW_PAGE;
-	m.req_pid=p->pid;
-	m.len=ph->memsz;
-	m.buf=va;
-	send(MEMMAN, &m);
-	receive(MEMMAN, &m);
-	ka=(void*)m.ret;
-	m.src=current->pid;
-	m.dest=FILEMAN;
-	m.type=DO_READ;
-	m.buf=ka;
-	m.offset=ph->off;
-	m.len=ph->filesz;
-	send(FILEMAN, &m);
-	receive(FILEMAN, &m);
+	ka=new_page(p->pid, ph->memsz, va);
+        read_file(m.dev_id, ka, ph->off, ph->filesz);
 	for (i = ka + ph->filesz; i < ka + ph->memsz; *i ++ = 0);
       }
-      m.src=current->pid;
-      m.dest=MEMMAN;
-      m.type=NEW_PAGE;
-      m.req_pid=p->pid;
-      m.len=4096;
-      m.buf=(void*)0xBFFFF000;
-      send(MEMMAN, &m);
-      receive(MEMMAN, &m);
-      TrapFrame *tf=(TrapFrame *)(m.ret+0x1000-sizeof(TrapFrame));
-      p->tf=tf;
-      p->lock=0;
-      p->lockif=0;
-      list_init(&(p->msgq));
-      create_sem(&(p->msem), 0);
-      tf->eip=elf->entry;
-      tf->cs=(uint32_t)SELECTOR_USER(SEG_USER_CODE);
-      tf->ds=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
-      tf->es=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
-      tf->fs=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
-      tf->gs=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
-      tf->esp=0xbfffffff;
-      tf->eflags=512;
-      tf->ss=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
-      wakeup(p);
+      ka=new_page(p->pid, 4096, (void*)0xbffff000);
+      new_proc(p, (TrapFrame *)(ka+0x1000-sizeof(TrapFrame)), 0xbfffffff, elf->entry);
       m.dest=osrc;
       m.src=PROCMAN;
       m.ret=1;
@@ -101,7 +70,9 @@ pm_thread(void) {
       receive(MEMMAN, &m);
       free_pcb(m.req_pid);
     }
-    else {
+    else if (m.type == EXEC_PROC) {
+      
+    } else {
       assert(0);
     }
   }

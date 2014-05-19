@@ -10,6 +10,7 @@ getty(void) {
 	lock();
 	name[3] += (tty_idx ++);
 	unlock();
+	Msg m;
 
 	while(1) {
 		/* Insert code here to do these:
@@ -19,6 +20,14 @@ getty(void) {
 		 */
 		memset(buf, 0, 256);
 		dev_read(name, current->pid, buf, 0, 256);
+		if(buf[0]=='.' && buf[1]=='/' && buf[2]<='9' && buf[2]>='0') {
+			m.dest=PROCMAN;
+			m.src=current->pid;
+			m.type=NEW_PROC;
+			m.dev_id=buf[2]-'0';
+			send(PROCMAN, &m);
+			continue;
+		}
 		for(i=0; i<strlen(buf); i++)
 			if (buf[i]<='z' && buf[i]>='a')
 				buf[i]+='A'-'a';

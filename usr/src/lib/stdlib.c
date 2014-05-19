@@ -11,3 +11,7 @@ syscall(int id, ...) {
 void exit(int status) {
 	syscall(SYS_exit, status);
 }
+
+int fork() {
+	return syscall(SYS_fork);
+}

@@ -7,11 +7,15 @@
 #define NR_PROC 50
 #define NEW_PROC 301
 #define DSTRY_PROC 302
+#define EXEC_PROC 303
 #include "adt/list.h"
 #include "common.h"
 #include "string.h"
+#include "memory.h"
 
 pid_t PROCMAN;
+extern PDE updir[][NR_PDE];
+extern PTE uptable[][2*NR_PTE];
 
 typedef struct Semaphore {
   int token;
@@ -29,7 +33,7 @@ typedef struct memdist {
 typedef union PCB {
   uint8_t kstack[KSTACK_SIZE];
   struct {
-    void *tf;
+    TrapFrame *tf;
     volatile int lock;
     volatile bool lockif;
     ListHead msgq;
@@ -169,6 +173,36 @@ do_exit(int status, pid_t pid) {
   assert(0);
 }
 
+static inline void new_proc(PCB* p, TrapFrame *tf, uint32_t esp, uint32_t eip) {
+  p->tf=tf;
+  p->lock=0;
+  p->lockif=0;
+  list_init(&(p->msgq));
+  create_sem(&(p->msem), 0);
+  tf->eip=eip;
+  tf->cs=(uint32_t)SELECTOR_USER(SEG_USER_CODE);
+  tf->ds=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+  tf->es=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+  tf->fs=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+  tf->gs=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+  tf->esp=esp;
+  tf->eflags=512;
+  tf->ss=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
+  wakeup(p);
+}
+
+static inline void pcbfork(PCB* dest, PCB* src) {
+  pid_t opid=dest->pid;
+  memcpy(dest, src, sizeof(PCB));
+  dest->pid=opid;
+  list_init(&(dest->msgq));
+  create_sem(&(dest->msem), 0);
+  dest->cr3.val=0;
+  dest->cr3.page_directory_base=((uint32_t)va_to_pa(updir[dest->pid-13]))>>12;
+  dest->tf=(TrapFrame*)((uint32_t)(dest->kstack)+(uint32_t)(src->tf)-(uint32_t)(src->kstack));
+}
+
 void free_pcb(pid_t pid);
+void* new_page(pid_t req_id, size_t len, void* va);
 
 #endif

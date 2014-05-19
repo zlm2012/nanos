@@ -18,20 +18,24 @@ void make_pte(PTE *, void *, int, int);
 
 void* get_page(size_t size);
 void free_page(void* pa, size_t size);
+void realloc_page(void* pa, size_t size);
 
 static inline void*
 nndma_to_ka(uint32_t cr3, uint32_t va) {
-	uint32_t pde = ((uint32_t *)(cr3 & ~0xfff))[va >> 22];
-	uint32_t pte = ((uint32_t *)(pde & ~0xfff))[(va >> 12) & 0x3ff];
-	uint32_t pa = (pte & ~0xfff) | (va & 0xfff);
-	return (void*)(pa+KOFFSET);
+  cr3+=KOFFSET;
+  uint32_t pde = ((uint32_t *)(cr3 & ~0xfff))[va >> 22]+KOFFSET;
+  uint32_t pte = ((uint32_t *)(pde & ~0xfff))[(va >> 12) & 0x3ff];
+  uint32_t pa = (pte & ~0xfff) | (va & 0xfff);
+  return (void*)(pa+KOFFSET);
 }
 
-#define va_to_pa(addr) \
-	((void*)(((uint32_t)(addr)) - KOFFSET))
 
-#define pa_to_va(addr) \
-	((void*)(((uint32_t)(addr)) + KOFFSET))
+
+#define va_to_pa(addr)                          \
+  ((void*)(((uint32_t)(addr)) - KOFFSET))
+
+#define pa_to_va(addr)                          \
+  ((void*)(((uint32_t)(addr)) + KOFFSET))
 
 
 

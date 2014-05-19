@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "process.h"
 #include "hal.h"
+#include "file.h"
 
 #define NEW_TIMER 100
 #define DO_READ 101

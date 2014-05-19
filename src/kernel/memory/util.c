@@ -1,13 +1,13 @@
 #include "x86/memory.h"
 #include "string.h"
 
-static bool* bitmap;
+static uint8_t* bitmap;
 static int page_total;
 
 void
 init_bitmap() {
 	page_total=((unsigned)*MEM_INF)>>12;
-	if(!(bitmap=(bool*)kmalloc(page_total)) && page_total>0)panic("bitmap init failed\n");
+	if(!(bitmap=(uint8_t*)kmalloc(page_total)) && page_total>0)panic("bitmap init failed\n");
 	printk("bitmap address: %p\n", bitmap);
 }
 
@@ -22,7 +22,8 @@ ATMP_FAILED:
 				goto ATMP_FAILED;
 			}
 		for (i=0; i<size; i++)
-			bitmap[b+i]=true;
+			bitmap[b+i]=1;
+		printk("Page alloc: %x\n", (0x1000000+(b<<12)));
 		return ((void*)(0x1000000+(b<<12)));
 	}
 	return 0;
@@ -30,9 +31,18 @@ ATMP_FAILED:
 
 void
 free_page(void* pa, size_t size) {
-	int b=((int)pa-0x1000000)>>12;
+	int b=((int)pa-0x1000000)>>12, i;
 	if (page_total!=0)
-		memset(bitmap+b, 0, size);
+		for (i=0; i<size; i++)
+			bitmap[b+i]--;
+}
+
+void
+realloc_page(void* pa, size_t size) {
+	int b=((int)pa-0x1000000)>>12, i;
+	if (page_total!=0)
+		for (i=0; i<size; i++)
+			bitmap[b+i]++;
 }
 
 void
