@@ -57,11 +57,11 @@ void do_fork(TrapFrame* tf) {
   realloc_page(pa, len);
   for(ipa=pa,i=0, j=0x48; i<len; i++, j++, ipa+=PAGE_SIZE)
     make_pte(&uptable[p->pid-13][j], ipa, 1, 0);
-  pa=current->paged.daddr;
   len=current->paged.dsize;
-  realloc_page(pa, len);
+  p->paged.daddr=pa=get_page(len);
   for(ipa=pa,i=0; i<len; i++, j++, ipa+=PAGE_SIZE)
     make_pte(&uptable[p->pid-13][j], ipa, 1, 1);
+  memcpy(pa_to_va(pa), pa_to_va(current->paged.daddr), 4096*len); 
   make_pte(&uptable[p->pid-13][2*NR_PTE-1], pa=get_page(1), 1, 1);
   p->paged.saddr=pa;
   printk("original cr3: %x, new cr3: %x", current->cr3.val, p->cr3.val);

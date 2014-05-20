@@ -1,6 +1,8 @@
 #include "stdio.h"
 #include "stdlib.h"
 
+volatile int x;
+
 int main(int argc, char** argv) {
 	printf("Hello World!\n");
 	printf("Just test for arguement: %d\n", 200);
@@ -10,11 +12,15 @@ int main(int argc, char** argv) {
         int pid;
         if (argc==1) {
           printf("argc==1, now test fork and exec()...\n");
-          if ((pid=fork())==0)
+          if ((pid=fork())==0) {
+            x=getpid();
+            printf("Test for data: %d, from child. Then exec()...\n", x);
             exec(3, 2, ar);
-          else {
+          } else {
+            x=233;
             waitpid(pid);
             printf("Child finished. from parent\n");
+            printf("P.S. test for data: %d, from parent.\n", x);
           }
         } else {
           printf("init by exec(). Now print argv:\n");

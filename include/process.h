@@ -181,11 +181,13 @@ receive_noblock(pid_t src, Msg *m) {
 
 static inline PCB*
 new_pcb(void) {
+  lock();
   int i;
   for(i=0; pcbpool[i].va && i<NR_PROC; i++);
   assert(i<NR_PROC);
   pcbpool[i].pid=i;
   pcbpool[i].va=true;
+  unlock();
   return &pcbpool[i];
 }
 
