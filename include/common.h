@@ -15,5 +15,6 @@ void kfree(void* ap);
 #define SYS_printf 202
 #define SYS_exit 100
 #define SYS_fork 101
+#define SYS_exec 102
 
 #endif

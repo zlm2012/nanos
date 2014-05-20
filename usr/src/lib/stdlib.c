@@ -15,3 +15,7 @@ void exit(int status) {
 int fork() {
 	return syscall(SYS_fork);
 }
+
+void exec(int filename, int argc, char** argv) {
+  syscall(SYS_exec, filename, argc, argv);
+}

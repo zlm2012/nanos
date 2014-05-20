@@ -70,6 +70,30 @@ void do_fork(TrapFrame* tf) {
   wakeup(p);
 }
 
+void do_exec(int filename, int argc, char** argv) {
+  Msg m;
+  char** kargv;
+  int i;
+  //printk("argc: %d, argv: %p\n", argc, argv);
+  kargv=(char**)kmalloc(argc*sizeof(char*));
+  //printk("kargv: %p, dargv: %p\n", kargv, dargv);
+  for (i=0; i<argc; i++) {
+    kargv[i]=kmalloc(strlen(argv[i])+1);
+    strcpy_to_kernel(current, kargv[i], argv[i]);
+    //printk("%s\n", kargv[i]);
+  }
+  //printk("Start exec proc...\n");
+  m.src=current->pid;
+  m.dest=PROCMAN;
+  m.req_pid=current->pid;
+  m.type=EXEC_PROC;
+  m.buf=kargv;
+  m.len=argc;
+  m.dev_id=filename;
+  send(PROCMAN, &m);
+  sleep();
+}
+
 void irq_handle(TrapFrame *tf) {
   int irq = tf->irq;
 
@@ -95,12 +119,20 @@ void irq_handle(TrapFrame *tf) {
       do_exit(tf->ebx, current->pid);
       break;
     case SYS_printf:
+      lock();
       printk("%s", (const char*)tf->ebx);
       tf->eax=vfprintf(putsbuf, (const char*)tf->ebx, (void**)tf->ecx);
       flush();
+      unlock();
       break;
     case SYS_fork:
       do_fork(tf);
+      return;
+      break;
+    case SYS_exec:
+      printk("start exec...\n");
+      do_exec(tf->ebx, tf->ecx, (void*)tf->edx);
+      printk("exec executed...\n");
       return;
       break;
     default:

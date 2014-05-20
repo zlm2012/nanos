@@ -12,24 +12,26 @@ typedef union header {
 
 static Header base;
 static Header *freep = 0;
+ELFHeader *elf;
+ProgHeader *ph;
 
 void *kmalloc(size_t nbytes) {
   Header *p, *prevp;
-  ELFHeader *elf=(ELFHeader*)0x8000;
-  ProgHeader *ph=(ProgHeader*)((char *)elf + elf->phoff);
   unsigned int lowend=0, i;
   unsigned nunits;
 
   nunits=(nbytes+sizeof(Header)-1)/sizeof(Header)+1;
   //printk("kmalloc units: %d\n", nunits);
   if ((prevp = freep) == 0) {
+    elf=(ELFHeader*)0x8000;
+    ph=(ProgHeader*)((char *)elf + elf->phoff);
     for (i=0; i<elf->phnum; i++)
       if (ph[i].paddr+ph[i].memsz>lowend)
         lowend=ph[i].paddr+ph[i].memsz;
     lowend>>=12;
     lowend++;
     lowend<<=12;
-    printk("lowend: %x\n", lowend);
+    //printk("lowend: %x\n", lowend);
     base.s.ptr=(Header*)lowend;
     freep=prevp=&base;
     base.s.size=0;

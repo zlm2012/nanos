@@ -180,6 +180,7 @@ static inline void new_proc(PCB* p, TrapFrame *tf, uint32_t esp, uint32_t eip) {
   list_init(&(p->msgq));
   create_sem(&(p->msem), 0);
   tf->eip=eip;
+  tf->eax=1;
   tf->cs=(uint32_t)SELECTOR_USER(SEG_USER_CODE);
   tf->ds=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
   tf->es=(uint32_t)SELECTOR_USER(SEG_USER_DATA);
