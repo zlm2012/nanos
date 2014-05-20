@@ -7,11 +7,20 @@ extern PDE updir[][NR_PDE];
 
 static void pm_thread(void);
 
+static ListHead wpid_list[NR_PROC];
+typedef struct wpid_unit {
+  PCB* p;
+  ListHead h;
+}wpu;
+
 void
 init_pm(void) {
+  int i;
   PCB *p = create_kthread(pm_thread);
   PROCMAN = p->pid;
   wakeup(p);
+  for (i=0; i<NR_PROC; i++)
+    list_init(&wpid_list[i]);
 }
 
 void* new_page(pid_t req_id, size_t len, void* va) {
@@ -54,6 +63,8 @@ pm_thread(void) {
   uint32_t entry, argc, i;
   pid_t osrc;
   PCB* p;
+  ListHead *itr;
+  wpu* wp;
   char **kargv, **dargv;
 
   while (true) {
@@ -79,6 +90,10 @@ pm_thread(void) {
       m.ret=1;
       printk("User Process %d Created.\n", p->pid);
       if(m.dest>=0) send(m.dest, &m);
+    } else if (m.type == WAIT_PROC) {
+      wp=(wpu*)kmalloc(sizeof(wpu));
+      wp->p=fetch_pcb(m.src);
+      list_add_before(&wpid_list[m.req_pid], &(wp->h));
     } else if (m.type == DSTRY_PROC) {
       m.src=PROCMAN;
       m.dest=MEMMAN;
@@ -86,6 +101,14 @@ pm_thread(void) {
       send(MEMMAN, &m);
       receive(MEMMAN, &m);
       free_pcb(m.req_pid);
+      list_foreach(itr, &wpid_list[m.req_pid]) {
+        wp=list_entry(itr, wpu, h);
+        m.src=PROCMAN;
+        m.dest=wp->p->pid;
+        send(m.dest, &m);
+        list_del(itr);
+        kfree(wp);
+      }
     }
     else if (m.type == EXEC_PROC) {
       osrc=m.src;

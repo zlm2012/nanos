@@ -7,10 +7,15 @@ int main(int argc, char** argv) {
         char tmp[2][20]={"Test!", "Can't you see?"};
         char *ar[2]={tmp[0], tmp[1]};
         int i;
-        printf("argc: %d, argv: %p\n", argc, argv);
+        int pid;
         if (argc==1) {
-          printf("argc==1, now test exec()...\n");
-          exec(3, 2, ar);
+          printf("argc==1, now test fork and exec()...\n");
+          if ((pid=fork())==0)
+            exec(3, 2, ar);
+          else {
+            waitpid(pid);
+            printf("Child finished. from parent\n");
+          }
         } else {
           printf("init by exec(). Now print argv:\n");
           for (i=0; i<argc; i++)

@@ -19,3 +19,11 @@ int fork() {
 void exec(int filename, int argc, char** argv) {
   syscall(SYS_exec, filename, argc, argv);
 }
+
+int getpid() {
+  return syscall(SYS_gpid);
+}
+
+void waitpid(int pid) {
+  syscall(SYS_wpid, pid);
+}

@@ -8,6 +8,7 @@
 #define NEW_PROC 301
 #define DSTRY_PROC 302
 #define EXEC_PROC 303
+#define WAIT_PROC 304
 #include "adt/list.h"
 #include "common.h"
 #include "string.h"
@@ -147,6 +148,33 @@ receive(pid_t src, Msg *m) {
     }
 RCV_FAILED:
     P(&(current->msem));
+    //walked++;
+  }
+}
+
+
+static inline int
+receive_noblock(pid_t src, Msg *m) {
+  //volatile int walked;
+  ListHead *i;
+  Msg *mitr;
+  lock();
+  //walked=0;
+  if(list_empty(&(current->msgq))) goto RCV_FAILED;
+  list_foreach(i, &(current->msgq)) {
+    mitr=list_entry(i, Msg, list);
+    if(src==ANY || mitr->src==src) {
+      memcpy(m, mitr, sizeof(Msg));
+      list_del(i);
+      ((MsgPU*)mitr)->va=false;
+      msglen--;
+      //while (walked--) V(&(current->msem));
+      unlock();
+      return 1;
+    }
+  RCV_FAILED:
+    unlock();
+    return 0;
     //walked++;
   }
 }

@@ -94,6 +94,16 @@ void do_exec(int filename, int argc, char** argv) {
   sleep();
 }
 
+void do_wpid(pid_t pid) {
+  Msg m;
+  m.src=current->pid;
+  m.dest=PROCMAN;
+  m.type=WAIT_PROC;
+  m.req_pid=pid;
+  send(PROCMAN, &m);
+  receive(PROCMAN, &m);
+}
+
 void irq_handle(TrapFrame *tf) {
   int irq = tf->irq;
 
@@ -119,11 +129,11 @@ void irq_handle(TrapFrame *tf) {
       do_exit(tf->ebx, current->pid);
       break;
     case SYS_printf:
-      lock();
       printk("%s", (const char*)tf->ebx);
       tf->eax=vfprintf(putsbuf, (const char*)tf->ebx, (void**)tf->ecx);
       flush();
-      unlock();
+      current->tf=tf;
+      return;
       break;
     case SYS_fork:
       do_fork(tf);
@@ -133,6 +143,16 @@ void irq_handle(TrapFrame *tf) {
       printk("start exec...\n");
       do_exec(tf->ebx, tf->ecx, (void*)tf->edx);
       printk("exec executed...\n");
+      return;
+      break;
+    case SYS_gpid:
+      tf->eax=current->pid;
+      current->tf=tf;
+      return;
+      break;
+    case SYS_wpid:
+      do_wpid(tf->ebx);
+      current->tf=tf;
       return;
       break;
     default:
