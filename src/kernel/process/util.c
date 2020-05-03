@@ -2,21 +2,7 @@
 #include "adt/list.h"
 #include "string.h"
 
-//extern uint8_t stackPool[];
 extern PCB* current;
-extern void A();
-extern void B();
-extern void C();
-extern void D();
-extern void E();
-extern void test_setup();
-extern void testForTimer();
-extern void testIDE();
-extern void testRamdisk();
-extern void testMM();
-extern void testEmpty();
-extern void testPuts();
-extern void testUsrProc();
 
 int msglen=0;
 PCB pcbpool[NR_PROC];
@@ -170,23 +156,10 @@ free_pcb(pid_t pid) {
 void
 init_proc() {
   initProcQ();
-  //test_setup();
-  //wakeup(&pcbpool[0]);
-  //wakeup(create_kthread(A));
-  //wakeup(create_kthread(B));
-  //wakeup(create_kthread(C));
-  //wakeup(create_kthread(D));
-  //wakeup(create_kthread(E));
-  //wakeup(create_kthread(testIDE));
-  //wakeup(create_kthread(testForTimer));
-  //wakeup(create_kthread(testRamdisk));
 }
 
 void
 init_kthread() {
-  //wakeup(create_kthread(testMM));
-  //wakeup(create_kthread(testEmpty));
-  //wakeup(create_kthread(testUsrProc));
   Msg m;
   m.dest=PROCMAN;
   m.src=-2;
@@ -194,5 +167,4 @@ init_kthread() {
   m.type=NEW_PROC;
   send(PROCMAN, &m);
   m.dev_id=1;
-  //send(PROCMAN, &m);
 }

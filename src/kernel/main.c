@@ -19,14 +19,31 @@ void welcome(void);
 
 void os_init_cont(void);
 
+#define SERIAL_PORT  0x3F8
+
+static inline bool
+serial_idle_t(void) {
+	return (in_byte(SERIAL_PORT + 5) & 0x20) != 0;
+}
+
+void
+serial_printc_t(char ch) {
+	while (serial_idle_t() != true);
+	out_byte(SERIAL_PORT, ch);
+}
+
 void
 os_init(void) {
 	/* Notice that when we are here, IF is always 0 (see bootloader) */
 
+	serial_printc_t('&');
+	serial_printc_t('\n');
 	/* We must set up kernel virtual memory first because our kernel
 	   thinks it is located in 0xC0000000.
 	   Before setting up correct paging, no global variable can be used. */
 	init_page();
+	serial_printc_t('^');
+	serial_printc_t('\n');
 
 	/* After paging is enabled, we can jump to the high address to keep 
 	 * consistent with virtual memory, although it is not necessary. */
@@ -45,6 +62,7 @@ os_init_cont(void) {
 
 	/* Initialize the serial port. After that, you can use printk() */
 	init_serial();
+	printk("Serial inited\n");
 
 	/* Set up interrupt and exception handlers,
 	   just as we did in the game. */
@@ -92,4 +110,6 @@ out_byte(PORT_TIME    , count / 256);
 void
 welcome(void) {
 	printk("Hello, OS World!\n");
+	printk("%x\n", *((uint32_t *)pa_to_va(0x10000)));
+	printk("%x\n", *((uint8_t *)pa_to_va(0x11000)));
 }

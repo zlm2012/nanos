@@ -23,40 +23,58 @@ start:
 
 	movw	$0x1000, %ax
 	movw	%ax, %es
-	movw	$0x0000, %di
-meme801:
-	stc					# fix to work around buggy
-	xorw	%cx,%cx				# BIOSes which dont clear/set
-	xorw	%dx,%dx				# carry on pass/error of
-						# e801h memory size call
-						# or merely pass cx,dx though
-						# without changing them.
-	movw	$0xe801, %ax
-	int	$0x15
+	movw	$0x1000, %di
+	movb	%dl, %es:0(%di)
+	jmp	init_serial
 
-	cmpw	$0x0, %cx			# Kludge to handle BIOSes
-	jne	e801usecxdx			# which report their extended
-	cmpw	$0x0, %dx			# memory in AX/BX rather than
-	jne	e801usecxdx			# CX/DX.  The spec I have read
-	movw	%ax, %cx			# seems to indicate AX/BX 
-	movw	%bx, %dx			# are more reasonable anyway...
+serial_print:
+	movw	$0x3fd, %dx
+sp_loop:
+	in	(%dx), %al
+	test	$0x20, %al
+	je	sp_loop
+	movb	$0xf8, %dl
+	mov	%cl, %al
+	out	%al, (%dx)
+	ret
 
-e801usecxdx:
-	andl	$0xffff, %edx			# clear sign extend
-	shll	$16, %edx			# and go from 64k to 1k chunks
-	movl	%edx, %es:0(%di)			# store extended memory size
-	andl	$0xffff, %ecx
-	shll	$10, %ecx
-	addl	$1048576, %ecx			# clear sign extend
- 	movl	%ecx, %es:4(%di)			# and add lower memory into
-						# total size.
+init_serial:
+	movw	$0x3f9, %dx
+	xorw	%ax, %ax
+	out	%al, (%dx)
+	movb	$0xfb, %dl
+	movb	$0x80, %al
+	out	%al, (%dx)
+	movb	$0xf8, %dl
+	movb	$0x1, %al
+	out	%al, (%dx)
+	movb	$0xf9, %dl
+	xorw	%ax, %ax
+	out	%al, (%dx)
+	movb	$0xfb, %dl
+	movb	$0x3, %al
+	out	%al, (%dx)
+	movb	$0xfa, %dl
+	movb	$0xc7, %al
+	out	%al, (%dx)
+	movb	$0xfc, %dl
+	movb	$0xb, %al
+	out	%al, (%dx)
+
+try_serial:
+	movb	$0x2a, %cl
+	call	serial_print
+	movb	$0xa, %cl
+	call	serial_print
+
 load_loader:
+	xorw	%dx, %dx
+	movb	%es:0(%di), %dl
 	xorb	%ah, %ah
-	movb	$0x80, %dl
 	int	$0x13
 
 	xorw	%dx, %dx
-	movb	$0x80, %dl
+	movb	%es:0(%di), %dl
 	movw	$0x0002, %cx
 	movw	$0x0000, %ax
 	movw	%ax, %es
@@ -65,8 +83,12 @@ load_loader:
 	movb	$0x08, %al
 	int	$0x13
 	jnc	go
+	movb	$0x21, %cl
+	call	serial_print
+	movb	$0xa, %cl
+	call	serial_print
 	hlt
 
 go:
-	jmp	0x9000
+	ljmp	$0x0, $0x9000
 

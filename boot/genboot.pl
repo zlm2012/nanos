@@ -19,11 +19,11 @@ print SIG $buf;
 
 open(SIG, $ARGV[1]) || die "open $ARGV[1]: $!";
 
-$n = sysread(SIG, $buf, 31744);
+$n = sysread(SIG, $buf, 8704);
 
 print STDERR "Bootloader Stage 2 is $n bytes\n";
 
-$buf .= "\0" x (31744-$n);
+$buf .= "\0" x (8704-$n);
 
 open(SIG, ">$ARGV[1]") || die "open >$ARGV[1]: $!";
 print SIG $buf;

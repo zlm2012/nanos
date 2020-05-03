@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
           if ((pid=fork())==0) {
             x=getpid();
             printf("Test for data: %d, from child. Then exec()...\n", x);
-            exec(3, 2, ar);
+            exec(0, 2, ar);
           } else {
             x=233;
             waitpid(pid);

@@ -1,6 +1,6 @@
 #include "kernel.h"
 #define NR_MAX_FILE 8
-#define NR_FILE_SIZE (128 * 1024)
+#define NR_FILE_SIZE (6 * 1024)
  
 pid_t FILEMAN;
 
