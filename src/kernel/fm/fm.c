@@ -18,7 +18,7 @@ do_write(int filename, uint8_t *buf, off_t offset, size_t len) {
 
 void
 init_fm(void) {
-  PCB *p = create_kthread(fm_thread);
+  PCB *p = create_kthread("File Manager", fm_thread);
   FILEMAN = p->pid;
   wakeup(p);
 }

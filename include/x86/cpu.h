@@ -44,6 +44,14 @@ read_cr0() {
 	return val;
 }
 
+/* read CR2 */
+static inline uint32_t
+read_cr2() {
+	uint32_t val;
+	asm volatile("movl %%cr2, %0" : "=r"(val));
+	return val;
+}
+
 /* write CR0 */
 static inline void
 write_cr0(CR0 *cr0) {

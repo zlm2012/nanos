@@ -16,7 +16,7 @@ typedef struct wpid_unit {
 void
 init_pm(void) {
   int i;
-  PCB *p = create_kthread(pm_thread);
+  PCB *p = create_kthread("Process Manager", pm_thread);
   PROCMAN = p->pid;
   wakeup(p);
   for (i=0; i<NR_PROC; i++)

@@ -23,7 +23,7 @@ init_mm(void) {
     make_pde(&updir[pdir_idx][0x08048000/PD_SIZE], va_to_pa(uptable[pdir_idx]), 1);
     make_pde(&updir[pdir_idx][KOFFSET/PD_SIZE-1], va_to_pa(&uptable[pdir_idx][NR_PTE]), 1);
   }
-  PCB *p = create_kthread(mm_thread);
+  PCB *p = create_kthread("Memory Manager", mm_thread);
   MEMMAN = p->pid;
   wakeup(p);
 }

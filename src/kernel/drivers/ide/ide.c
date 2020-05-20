@@ -21,7 +21,7 @@ init_ide(void) {
 	cache_init();
 	add_irq_handle(14, ide_intr);
 	add_irq_handle(0 , time_intr);
-	PCB *p = create_kthread(ide_driver_thread);
+	PCB *p = create_kthread("ide", ide_driver_thread);
 	IDE = p->pid;
 	hal_register("hda", IDE, 0);
 	wakeup(p);

@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "multiboot2.h"
 
 typedef long Align;
 
@@ -12,8 +13,8 @@ typedef union header {
 
 static Header base;
 static Header *freep = 0;
-ELFHeader *elf;
-ProgHeader *ph;
+struct multiboot_tag_elf_sections *elf;
+SectionHeader *sh;
 
 void *kmalloc(size_t nbytes) {
   Header *p, *prevp;
@@ -21,23 +22,26 @@ void *kmalloc(size_t nbytes) {
   unsigned nunits;
 
   nunits=(nbytes+sizeof(Header)-1)/sizeof(Header)+1;
-  //printk("kmalloc units: %d\n", nunits);
+  printk("kmalloc units: %d\n", nunits);
   if ((prevp = freep) == 0) {
-    elf=(ELFHeader*)0x8000;
-    ph=(ProgHeader*)((char *)elf + elf->phoff);
-    for (i=0; i<elf->phnum; i++)
-      if (ph[i].paddr+ph[i].memsz>lowend)
-        lowend=ph[i].paddr+ph[i].memsz;
+    elf=*(void **)(pa_to_va(ELF_INFO_PTR));
+    printk("elf info: %p\n", elf);
+    sh=(SectionHeader*)(&elf->sections);
+    for (i=0; i<elf->entsize; i++)
+      if (sh[i].addr != 0 && sh[i].addr+sh[i].size>lowend) {
+        lowend=sh[i].addr+sh[i].size;
+        printk("shaddr: %x, shsize: %x\n", sh[i].addr, sh[i].size);
+      }
     lowend>>=12;
     lowend++;
     lowend<<=12;
-    //printk("lowend: %x\n", lowend);
+    printk("lowend: %x\n", lowend);
     base.s.ptr=(Header*)lowend;
     freep=prevp=&base;
     base.s.size=0;
     base.s.ptr->s.ptr=(Header*)lowend;
     lowend-=0xc0000000;
-    base.s.ptr->s.size=(((unsigned)* KRN_MEM)-lowend-sizeof(Header))/sizeof(Header);
+    base.s.ptr->s.size=(KRN_MEM-lowend-sizeof(Header))/sizeof(Header);
   }
 
   if(nbytes==0)

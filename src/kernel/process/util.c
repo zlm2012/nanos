@@ -2,7 +2,8 @@
 #include "adt/list.h"
 #include "string.h"
 
-extern PCB* current;
+extern PCB idle, *current;
+extern void os_idle(void);
 
 int msglen=0;
 PCB pcbpool[NR_PROC];
@@ -116,9 +117,7 @@ void V(Sem *s) {
   unlock();
 }
 
-PCB*
-create_kthread(void *fun) {
-  PCB* pcb=new_pcb();
+static void init_pcb(PCB *pcb, void *fun) {
   TrapFrame *tf=(TrapFrame *)(pcb->kstack+4096-sizeof(TrapFrame));
   pcb->tf=tf;
   pcb->lock=0;
@@ -134,6 +133,13 @@ create_kthread(void *fun) {
   tf->gs=(uint32_t)SELECTOR_KERNEL(SEG_KERNEL_DATA);
   tf->xxx=(uint32_t)&(tf->gs);
   tf->eflags=512;
+}
+
+PCB*
+create_kthread(char *desc, void *fun) {
+  PCB* pcb=new_pcb();
+  init_pcb(pcb, fun);
+  printk("created %s kthread at pid %d\n", desc, pcb->pid);
   return pcb;
 }
 
@@ -156,6 +162,13 @@ free_pcb(pid_t pid) {
 void
 init_proc() {
   initProcQ();
+}
+
+void
+init_idle() {
+  init_pcb(&idle, os_idle);
+  idle.pid = -1;
+  idle.va = 1;
 }
 
 void

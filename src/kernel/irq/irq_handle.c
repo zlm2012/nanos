@@ -19,6 +19,7 @@ void flush();
 void putsbuf(char);
 char* bare_syscall_test="Bare Syscall Test...\n";
 char* seg_fault="Segmentation Fault\n";
+static int first_schedule = 0;
 
 struct IRQ_t {
   void (*routine)(void);
@@ -106,12 +107,14 @@ void do_wpid(pid_t pid) {
 
 void irq_handle(TrapFrame *tf) {
   int irq = tf->irq;
+  printk("handle irq %x\n", irq);
 
   if (irq < 0) {
     panic("Unhandled exception!");
   }
 
   if (irq == 0x80) {
+    printk("handle syscall %d\n", tf->eax);
     switch(tf->eax) {
     case 0:
       break;
@@ -159,9 +162,16 @@ void irq_handle(TrapFrame *tf) {
       assert(0);
     }
   } else if (irq < 1000) {
-    extern uint8_t logo[];
     printk("Errorcode: %x\n", tf->error_code);
-    printk("Unexpected exception #%d\n\33[1;31mHint: The machine is always right! For more details about exception #%d, see\n%s\n\33[0m", irq, irq, logo);
+    printk("Unexpected exception #%d\n", irq);
+    printk("Pid: %d\n", current->pid);
+    printk("Trapframe:\nedi: %08x, esi: %08x, ebp: %08x\n", tf->edi, tf->esi, tf->ebp);
+    printk("gs: %08x, fs: %08x, es: %08x, ds: %08x\n", tf->gs, tf->fs, tf->es, tf->ds);
+    printk("ebx: %08x, edx: %08x, ecx: %08x, eax: %08x\n", tf->ebx, tf->edx, tf->ecx, tf->eax);
+    printk("eip: %08x, cs: %08x, eflags: %08x\n", tf->eip, tf->cs, tf->eflags);
+    if (irq == 14) {
+      printk("cr2: %08x\n", read_cr2());
+    }
     if (current->cr3.val!=get_kcr3()->val) {
       dev_write(get_current_tty(), current->pid, seg_fault, 0, strlen(seg_fault));
       do_exit(-1, current->pid);
@@ -178,7 +188,10 @@ void irq_handle(TrapFrame *tf) {
     }
   }
 
-  current->tf = tf;
+  if (!first_schedule)
+    first_schedule = 1;
+  else
+    current->tf = tf;
   schedule();
 }
 

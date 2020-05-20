@@ -6,7 +6,8 @@ static int page_total;
 
 void
 init_bitmap() {
-	page_total=((unsigned)*MEM_INF)>>12;
+	page_total=(((*MEM_SIZE_PTR) << 10) - 0x1000000)>>12;
+	printk("mem: %d, page total: %d\n", *MEM_SIZE_PTR, page_total);
 	if(!(bitmap=(uint8_t*)kmalloc(page_total)) && page_total>0)panic("bitmap init failed\n");
 	printk("bitmap address: %p\n", bitmap);
 }

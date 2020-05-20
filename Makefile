@@ -10,14 +10,24 @@ CFILES  = $(shell find src/ -name "*.c")
 SFILES  = $(shell find src/ -name "*.S")
 OBJS    = $(CFILES:.c=.o) $(SFILES:.S=.o)
 
-run: disk.img
+run: test.iso
+	$(QEMU) -serial stdio -cdrom test.iso > serial_log
+
+hdd: disk.img
 	$(QEMU) -serial stdio disk.img
 
 floppy: disk.img
 	$(QEMU) -serial stdio -boot order=a -fda disk.img
 
-debug: disk.img
-	$(QEMU) -serial stdio -s -S disk.img
+debug: test.iso
+	$(QEMU) -serial stdio -s -S -cdrom test.iso
+
+debughdd: disk.img
+	$(QEMU) -serial stdio -s -S -boot order=a -fda disk.img
+
+test.iso: kernel
+	@cp kernel floppy/boot/
+	grub-mkrescue -o test.iso floppy/
 
 disk.img: kernel
 	@cd boot; make
@@ -25,6 +35,7 @@ disk.img: kernel
 
 kernel: $(OBJS)
 	$(LD) $(LDFLAGS) -T linker.ld -o kernel $(OBJS)
+#	$(LD) $(LDFLAGS) -e os_init -Ttext 0xC0100000 -o kernel $(OBJS)
 	objdump -D kernel > code.txt	# disassemble result
 	readelf -a kernel > elf.txt		# obtain more information about the executable
 

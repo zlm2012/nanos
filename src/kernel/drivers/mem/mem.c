@@ -5,7 +5,7 @@ static void mem_driver_thread();
 pid_t MEMDR;
 
 void init_mem() {
-  PCB *p = create_kthread(mem_driver_thread);
+  PCB *p = create_kthread("mem driver", mem_driver_thread);
   init_rand();
   init_ramdisk();
   MEMDR = p->pid;

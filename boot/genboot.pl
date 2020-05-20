@@ -23,7 +23,7 @@ $n = sysread(SIG, $buf, 8704);
 
 print STDERR "Bootloader Stage 2 is $n bytes\n";
 
-$buf .= "\0" x (8704-$n);
+$buf .= "\0" x (17920-$n);
 
 open(SIG, ">$ARGV[1]") || die "open >$ARGV[1]: $!";
 print SIG $buf;

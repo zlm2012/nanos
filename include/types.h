@@ -46,4 +46,17 @@ typedef struct ProgramHeader {
 	unsigned int align;
 } ProgHeader;
 
+typedef struct SectionHeader {
+	unsigned int name;
+	unsigned int type;
+	unsigned int flags;
+	unsigned int addr;
+	unsigned int offset;
+	unsigned int size;
+	unsigned int link;
+	unsigned int info;
+	unsigned int addralign;
+	unsigned int entsize;
+} SectionHeader;
+
 #endif
