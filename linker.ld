@@ -1,9 +1,10 @@
-ENTRY(os_init)
+ENTRY(multiboot_start)
 
 SECTIONS {
 	. = 0xC0100000;
 
 	.boot :
+	AT ( ADDR(.boot) - 0xC0000000 )
 	{
 		KEEP(*(.multiboot_header))
 	}
@@ -34,5 +35,9 @@ SECTIONS {
 	AT ( ADDR(.bss) - 0xC0000000 )
 	{
 		*(.bss)
+	}
+	/DISCARD/ :
+	{
+		*(.eh_frame)
 	}
 }

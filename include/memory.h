@@ -40,7 +40,7 @@ nndma_to_ka(uint32_t cr3, uint32_t va) {
 
 
 /* the maxinum kernel size is 16MB */
-#define KMEM    (16 * 1024 * 1024)
+#define KMEM    (8 * 1024 * 1024)
 
 /* Nanos has 128MB physical memory  */
 #define PHY_MEM   (128 * 1024 * 1024)

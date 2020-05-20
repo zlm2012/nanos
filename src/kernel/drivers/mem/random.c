@@ -58,7 +58,7 @@ void init_rand(void)
   random_state.entropy_count = 0;
   random_state.pool = random_pool;
   extract_timer_state.dont_count_entropy = 1;
-  PCB *p = create_kthread(rand_driver_thread);
+  PCB *p = create_kthread("random driver", rand_driver_thread);
   RND = p->pid;
   hal_register("random", RND, 0);
   wakeup(p);

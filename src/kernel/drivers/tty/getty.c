@@ -41,7 +41,7 @@ void
 init_getty(void) {
 	int i;
 	for(i = 0; i < NR_TTY; i ++) {
-		wakeup(create_kthread(getty));
+		wakeup(create_kthread("getty", getty));
 	}
 }
 

@@ -34,10 +34,6 @@ bootmain(void) {
 	void (*entry)(void);
 	unsigned int j;
 
-	serial_printc('0');
-	init_floppy();
-	init_idt();
-
 	serial_printc('1');
 
 	/* The binary is in ELF format (please search the Internet).
@@ -128,6 +124,10 @@ readsect(void *dst, unsigned int offset) {
 	}
 }
 
+void
+pseudo_readsect(void *dst, unsigned int offset) {
+	memcpy(dst, ((char *)0x20000) + offset * SECTSIZE, SECTSIZE);
+}
 /* Read "count" bytes at "offset" from binary into physical address "pa". */
 void
 readseg(unsigned char *pa, int count, int offset) {
@@ -136,7 +136,12 @@ readseg(unsigned char *pa, int count, int offset) {
 	//secsize = fd_secsize();
 	epa = pa + count;
 	pa -= offset % SECTSIZE;
-	offset = (offset / SECTSIZE) + 18;
+	/*
+	offset = offset / SECTSIZE;
+	for(; pa < epa; pa += SECTSIZE, offset ++)
+		pseudo_readsect(pa, offset);
+	*/
+	offset = (offset / SECTSIZE) + 36;
 	for(; pa < epa; pa += SECTSIZE, offset ++)
 		readsect(pa, offset);
 	/*

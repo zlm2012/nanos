@@ -100,7 +100,7 @@ unlock() {
 
 extern void P(Sem*);
 extern void V(Sem*);
-extern PCB* create_kthread(void*);
+extern PCB* create_kthread(char *, void *);
 extern void sleep(void);
 extern void wakeup(PCB*);
 

@@ -1,6 +1,8 @@
 #include "common.h"
 #include "x86/x86.h"
 #include "memory.h"
+//#include "multiboot2.h"
+#include "multiboot.h"
 
 void init_page(void);
 void init_serial(void);
@@ -15,35 +17,57 @@ void init_pm(void);
 void init_bitmap();
 void init_kthread();
 void print_bitmap();
+void init_idle();
 void welcome(void);
 
 void os_init_cont(void);
 
-#define SERIAL_PORT  0x3F8
-
-static inline bool
-serial_idle_t(void) {
-	return (in_byte(SERIAL_PORT + 5) & 0x20) != 0;
-}
+#define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
 
 void
-serial_printc_t(char ch) {
-	while (serial_idle_t() != true);
-	out_byte(SERIAL_PORT, ch);
-}
+os_init(uint32_t magic, uint32_t addr) {
+	multiboot_info_t *mbi;
 
-void
-os_init(void) {
-	/* Notice that when we are here, IF is always 0 (see bootloader) */
+	cli();
 
-	serial_printc_t('&');
-	serial_printc_t('\n');
+	assert(magic == MULTIBOOT_BOOTLOADER_MAGIC);
+	mbi = (multiboot_info_t *) addr;
+
+	assert(CHECK_FLAG(mbi->flags, 0));
+	*MEM_SIZE_PTR = mbi->mem_lower + mbi->mem_upper;
+
+	assert(CHECK_FLAG(mbi->flags, 4) ^ CHECK_FLAG(mbi->flags, 5));
+	assert(CHECK_FLAG(mbi->flags, 5));
+	*ELF_INFO_PTR = &(mbi->u.elf_sec);
+/*
+	struct multiboot_tag *tag;
+	//size_t size;
+	assert(magic == MULTIBOOT2_BOOTLOADER_MAGIC);
+	assert((addr & 7) == 0);
+
+	//size = *(size_t *) addr;
+	for (tag = (struct multiboot_tag *) (addr + 8);
+	     tag->type != MULTIBOOT_TAG_TYPE_END;
+	     tag = (struct multiboot_tag *) ((multiboot_uint8_t *) tag + ((tag->size + 7) & ~7))) {
+		switch (tag->type) {
+		case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
+			*MEM_SIZE_PTR = ((struct multiboot_tag_basic_meminfo *) tag)->mem_lower +
+			                ((struct multiboot_tag_basic_meminfo *) tag)->mem_upper;
+			break;
+		case MULTIBOOT_TAG_TYPE_ELF_SECTIONS:
+			*ELF_INFO_PTR = tag;
+			break;
+		}
+	}
+*/
+		
+	//printk("test\n");
+	
+	
 	/* We must set up kernel virtual memory first because our kernel
 	   thinks it is located in 0xC0000000.
 	   Before setting up correct paging, no global variable can be used. */
 	init_page();
-	serial_printc_t('^');
-	serial_printc_t('\n');
 
 	/* After paging is enabled, we can jump to the high address to keep 
 	 * consistent with virtual memory, although it is not necessary. */
@@ -99,9 +123,17 @@ out_byte(PORT_TIME    , count / 256);
 
 	welcome();
 
+	init_idle();
+
 	sti();
 
 	/* This context now becomes the idle process. */
+	while (1) {
+		wait_intr();
+	}
+}
+
+void os_idle(void) {
 	while (1) {
 		wait_intr();
 	}

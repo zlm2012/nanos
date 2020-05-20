@@ -124,7 +124,7 @@ void init_timer(void) {
   init_i8253();
   init_rt();
   add_irq_handle(0, update_jiffy);
-  PCB *p = create_kthread(timer_driver_thread);
+  PCB *p = create_kthread("timer", timer_driver_thread);
   TIMER = p->pid;
   wakeup(p);
   list_init(&th);

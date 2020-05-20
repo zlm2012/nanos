@@ -456,7 +456,7 @@ static void ramdisk_driver_thread(void);
 
 void
 init_ramdisk(void) {
-  PCB *p = create_kthread(ramdisk_driver_thread);
+  PCB *p = create_kthread("ramdisk driver", ramdisk_driver_thread);
   RAMDISK = p->pid;
   hal_register("ram", RAMDISK, 0);
   wakeup(p);
