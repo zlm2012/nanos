@@ -6,7 +6,7 @@ static int page_total;
 
 void
 init_bitmap() {
-	page_total=(((*MEM_SIZE_PTR) << 10) - 0x1000000)>>12;
+	page_total=(((*MEM_SIZE_PTR) << 10) - 0x800000)>>12;
 	printk("mem: %d, page total: %d\n", *MEM_SIZE_PTR, page_total);
 	if(!(bitmap=(uint8_t*)kmalloc(page_total)) && page_total>0)panic("bitmap init failed\n");
 	printk("bitmap address: %p\n", bitmap);
@@ -24,15 +24,15 @@ ATMP_FAILED:
 			}
 		for (i=0; i<size; i++)
 			bitmap[b+i]=1;
-		printk("Page alloc: %x\n", (0x1000000+(b<<12)));
-		return ((void*)(0x1000000+(b<<12)));
+		printk("Page alloc: %x\n", (0x800000+(b<<12)));
+		return ((void*)(0x800000+(b<<12)));
 	}
 	return 0;
 }
 
 void
 free_page(void* pa, size_t size) {
-	int b=((int)pa-0x1000000)>>12, i;
+	int b=((int)pa-0x800000)>>12, i;
 	if (page_total!=0)
 		for (i=0; i<size; i++)
 			bitmap[b+i]--;
@@ -40,7 +40,7 @@ free_page(void* pa, size_t size) {
 
 void
 realloc_page(void* pa, size_t size) {
-	int b=((int)pa-0x1000000)>>12, i;
+	int b=((int)pa-0x800000)>>12, i;
 	if (page_total!=0)
 		for (i=0; i<size; i++)
 			bitmap[b+i]++;
