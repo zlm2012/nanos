@@ -21,7 +21,7 @@ schedule(void) {
     }
   }
   write_cr3(&(current->cr3));
-  printk("written cr3: %x\n", current->cr3.val);
+  //printk("written cr3: %x\n", current->cr3.val);
   set_tss_esp0((uint32_t)(current->kstack+4095));
-  printk("change to pid %d belongs to pcb %p\n", current->pid, current);
+  //printk("change to pid %d belongs to pcb %p\n", current->pid, current);
 }

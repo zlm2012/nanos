@@ -71,6 +71,7 @@ mm_thread(void) {
     } else if (m.type == FREE_PAGE) {
       memset(uptable[m.req_pid-13], 0, 2*NR_PTE*sizeof(PTE));
       md=&(fetch_pcb(m.req_pid)->paged);
+      printk("3 to free page for pid %d, %p\n", m.req_pid, md->caddr);
       free_page(md->caddr, md->csize);
       free_page(md->daddr, md->dsize);
       free_page(md->saddr, 1);

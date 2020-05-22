@@ -107,14 +107,14 @@ void do_wpid(pid_t pid) {
 
 void irq_handle(TrapFrame *tf) {
   int irq = tf->irq;
-  printk("handle irq %x\n", irq);
+  //printk("handle irq %x\n", irq);
 
   if (irq < 0) {
     panic("Unhandled exception!");
   }
 
   if (irq == 0x80) {
-    printk("handle syscall %d\n", tf->eax);
+    //printk("handle syscall %d\n", tf->eax);
     switch(tf->eax) {
     case 0:
       break;

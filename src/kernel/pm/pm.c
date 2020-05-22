@@ -84,6 +84,7 @@ pm_thread(void) {
         continue;
       }
       ka=new_page(p->pid, 4096, (void*)0xbffff000);
+      printk("ka: %p\n", ka);
       new_proc(p, (TrapFrame *)(ka+0x1000-sizeof(TrapFrame)), 0xbfffffff, entry);
       m.dest=osrc;
       m.src=PROCMAN;
@@ -116,7 +117,9 @@ pm_thread(void) {
       argc=m.len;
       dargv=(char**)kmalloc(argc*sizeof(char*));
       kargv=(char**)m.buf;
+      printk("1 to free page %p\n", p->paged.caddr);
       free_page(p->paged.caddr, p->paged.csize);
+      printk("2 to free page %p\n", p->paged.daddr);
       free_page(p->paged.daddr, p->paged.dsize);
       entry=proc_from_file(m.dev_id, p);
       if (entry==-1) {
@@ -126,7 +129,8 @@ pm_thread(void) {
         printk("Not an elf...\n");
         continue;
       }
-      ka=nndma_to_ka(p->cr3.val, (uint32_t)p->paged.saddr);
+      ka=new_page(p->pid, 4096, (void*)0xbffff000);
+      printk("ka: %p\n", ka);
       new_proc(p, (TrapFrame *)(ka+0x1000-sizeof(TrapFrame)), 0xbfffffff, entry);
       p->tf->eax=argc;
       esp=(char*)p->tf->esp;

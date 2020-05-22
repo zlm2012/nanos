@@ -12,6 +12,14 @@ init_bitmap() {
 	printk("bitmap address: %p\n", bitmap);
 }
 
+void
+print_bitmap() {
+	int i;
+	for (i=0; i<10; i++)
+		printk("%d ", bitmap[i]);
+	printk("\nTail Pointer: %p\n", bitmap+page_total-1);
+}
+
 void*
 get_page(size_t size) {
 	int b=0, i;
@@ -25,6 +33,7 @@ ATMP_FAILED:
 		for (i=0; i<size; i++)
 			bitmap[b+i]=1;
 		printk("Page alloc: %x\n", (0x800000+(b<<12)));
+		print_bitmap();
 		return ((void*)(0x800000+(b<<12)));
 	}
 	return 0;
@@ -33,25 +42,23 @@ ATMP_FAILED:
 void
 free_page(void* pa, size_t size) {
 	int b=((int)pa-0x800000)>>12, i;
+	printk("freepage: %p %d\nbefore: ", pa, b);
+	print_bitmap();
 	if (page_total!=0)
 		for (i=0; i<size; i++)
 			bitmap[b+i]--;
+	printk("after: ");
+	print_bitmap();
 }
 
 void
 realloc_page(void* pa, size_t size) {
+	printk("Page realloc: %x\n", pa);
 	int b=((int)pa-0x800000)>>12, i;
 	if (page_total!=0)
 		for (i=0; i<size; i++)
 			bitmap[b+i]++;
-}
-
-void
-print_bitmap() {
-	int i;
-	for (i=0; i<page_total; i++)
-		printk("%d ", (bitmap[i]>0)?1:0);
-	printk("\nTail Pointer: %p", bitmap+page_total-1);
+	print_bitmap();
 }
 
 void

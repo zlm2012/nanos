@@ -1,6 +1,6 @@
 CC      = gcc
 LD      = ld
-CFLAGS  = -m32 -static -ggdb -MD -Wall -Werror -I./include -O2 \
+CFLAGS  = -m32 -march=i386 -static -ggdb -MD -Wall -Werror -I./include -Os \
 		 -fno-builtin -fno-stack-protector -fno-omit-frame-pointer
 ASFLAGS = -m32 -MD -I./include
 LDFLAGS = -melf_i386 --verbose
@@ -11,7 +11,7 @@ SFILES  = $(shell find src/ -name "*.S")
 OBJS    = $(CFILES:.c=.o) $(SFILES:.S=.o)
 
 run: test.iso
-	$(QEMU) -serial stdio -cdrom test.iso > serial_log
+	$(QEMU) -serial stdio -cdrom test.iso
 
 hdd: disk.img
 	$(QEMU) -serial stdio disk.img
